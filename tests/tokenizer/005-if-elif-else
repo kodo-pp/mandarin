@@ -1,0 +1,7 @@
+if 4 > 0
+    print("4 > 0")
+elif 4 < 0
+    print('4 < 0')
+else
+    print("4 = 0")
+end
