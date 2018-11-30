@@ -3,6 +3,7 @@
 import string
 
 import src.tokens as tokens
+from src.string_matcher import StringMatcher
 
 
 def is_keyword(s):
@@ -99,13 +100,18 @@ def read_string(expr):
             i += 1
     return None
 
+operator_matcher = StringMatcher(
+    '+ - * / % ! && || < <= == != >= > = += -= *= /= %= >> << >>= <<= & | ~ &= |= ^ ^= .. ...'.split()
+)
+
+
 token_rules = {
     tokens.DecimalInteger:      r'[1-9][0-9]*|0',
     tokens.Float:               r'(([1-9][0-9]*|0)?[.][0-9]+(e[+-]?[0-9]+)?)|(([1-9][0-9]*|0)e[+-]?([0-9]+))',
     tokens.Whitespace:          r'[ \t]',
     tokens.Newline:             r'\r?\n',
     tokens.Identifier:          read_identifier,
-    tokens.Operator:            r'[+*/%-]|\|\||\&\&|\!=|==|\>=|\<=|-\>|\<|\>|\!',
+    tokens.Operator:            operator_matcher.longest_len,
     tokens.Parenthesis:         r'[()]',
     tokens.Comma:               r',',
     tokens.Keyword:             read_keyword,
