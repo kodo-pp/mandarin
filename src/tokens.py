@@ -84,6 +84,12 @@ class Integer(Literal):
         self.name = 'Integer'
 
 
+class BoolLiteral(Literal):
+    def __init__(self, val):
+        super().__init__(val=val)
+        self.name = 'BoolLiteral'
+
+
 class DecimalInteger(Integer):
     def __init__(self, val):
         super().__init__(val=val)
