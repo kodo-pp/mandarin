@@ -8,30 +8,34 @@ from src.string_matcher import StringMatcher
 
 def is_keyword(s):
     core_kws = {
-        'def',
-        'if',
-        'end',
-        'for',
-        'in',
-        'while',
         'break',
-        'continue',
-        'return',
         'class',
-        'template',
-        'type',
+        'continue',
+        'def',
         'elif',
         'else',
+        'end',
+        'for',
+        'if',
+        'in',
+        'is',
+        'later',
+        'pass',
+        'super',
+        'return',
+        'template',
+        'type',
+        'while'
     }
     typename_kws = {
-        'int',
+        'array',
         'bool',
-        'uint',
         'float',
+        'function',
+        'int',
         'string',
         'tuple',
-        'array',
-        'function',
+        'uint',
     }
     kws = core_kws.union(typename_kws)
     return s in kws
@@ -101,7 +105,7 @@ def read_string(expr):
     return None
 
 operator_matcher = StringMatcher(
-    '+ - * / % ! && || < <= == != >= > = += -= *= /= %= >> << >>= <<= & | ~ &= |= ^ ^= .. ...'.split()
+    '+ - * / % ! && || < <= == != >= > = += -= *= /= %= >> << >>= <<= & | ~ &= |= ^ ^= . .. ...'.split()
 )
 
 
@@ -113,7 +117,10 @@ token_rules = {
     tokens.Identifier:          read_identifier,
     tokens.Operator:            operator_matcher.longest_len,
     tokens.Parenthesis:         r'[()]',
+    tokens.Bracket:             r'\[|\]',
+    tokens.Brace:               r'[{}]',
     tokens.Comma:               r',',
+    tokens.Colon:               r':',
     tokens.Keyword:             read_keyword,
     tokens.String:              read_string,
     tokens.BoolLiteral:         read_bool_literal,

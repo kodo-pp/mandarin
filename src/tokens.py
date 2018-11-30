@@ -39,7 +39,7 @@ class Token:
         self.name = 'Token'
 
     def __repr__(self):
-        return 'Token{}({})'.format(':' + repr(self.name) if self.name is not None else '', self.val)
+        return '{}({})'.format(self.name, self.val)
 
 
 class Operator(Token):
@@ -144,10 +144,28 @@ class Parenthesis(Punctuation):
         self.name = 'Parenthesis'
 
 
+class Bracket(Punctuation):
+    def __init__(self, val):
+        super().__init__(val=val)
+        self.name = 'Bracket'
+
+
+class Brace(Punctuation):
+    def __init__(self, val):
+        super().__init__(val=val)
+        self.name = 'Brace'
+
+
 class Comma(Punctuation):
     def __init__(self, val):
         super().__init__(val=val)
         self.name = 'Comma'
+
+
+class Colon(Punctuation):
+    def __init__(self, val):
+        super().__init__(val=val)
+        self.name = 'Colon'
 
 
 class Keyword(SyntaxConstruction):
