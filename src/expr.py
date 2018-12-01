@@ -60,6 +60,7 @@ def split_list_by(ls, by, allow_empty=True):
 
 def parse_expression(tokens):
     root = TopLevelNode()
+    
     declarations = split_list_by(tokens, tok.Newline, False)
     for i in declarations:
         root.add_child(TopLevelDeclarationNode(i))
