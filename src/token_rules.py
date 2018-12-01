@@ -141,4 +141,4 @@ token_rules = {
 }
 
 
-ignored_tokens = [tokens.Whitespace]
+ignored_tokens = [tokens.Whitespace, tokens.Comment]
