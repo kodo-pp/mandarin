@@ -174,6 +174,12 @@ class Keyword(SyntaxConstruction):
         self.name = 'Keyword'
 
 
+class Comment(Token):
+    def __init__(self, val):
+        super().__init__(val=val)
+        self.name = 'Comment'
+
+
 def is_token_ignored(token, ignlist):
     for T in ignlist:
         if isinstance(token, T):

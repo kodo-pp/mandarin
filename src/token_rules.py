@@ -40,53 +40,54 @@ def is_keyword(s):
     kws = core_kws.union(typename_kws)
     return s in kws
 
+def is_bool_literal(s):
+    return s in {'true', 'false'}
+
+
 def maybe_identifier_length(s):
+    if s is None:
+        return None
     if is_keyword(s) or is_bool_literal(s):
         return None
     else:
         return len(s)
 
 def maybe_bool_literal_length(s):
+    if s is None:
+        return None
     if is_bool_literal(s):
         return len(s)
     else:
         return None
 
-def is_bool_literal(s):
-    return s in {'true', 'false'}
-
 def maybe_keyword_length(s):
+    if s is None:
+        return None
     if is_keyword(s):
         return len(s)
     else:
         return None
 
-def read_identifier(expr):
+
+def read_base(expr):
     id_chars = set(string.ascii_letters + string.digits + '_')
     id_firstchars = set(string.ascii_letters + '_')
     if len(expr) == 0 or expr[0] not in id_firstchars:
         return None
     for length in range(len(expr)):
         if expr[length] not in id_chars:
-            return maybe_identifier_length(expr[:length]) if length > 0 else None
+            return expr[:length] if length > 0 else None
+    return expr
+
+def read_identifier(expr):
+    return maybe_identifier_length(read_base(expr))
 
 def read_bool_literal(expr):
-    id_chars = set(string.ascii_letters + string.digits + '_')
-    id_firstchars = set(string.ascii_letters + '_')
-    if len(expr) == 0 or expr[0] not in id_firstchars:
-        return None
-    for length in range(len(expr)):
-        if expr[length] not in id_chars:
-            return maybe_bool_literal_length(expr[:length]) if length > 0 else None
+    return maybe_bool_literal_length(read_base(expr))
 
 def read_keyword(expr):
-    id_chars = set(string.ascii_letters + string.digits + '_')
-    id_firstchars = set(string.ascii_letters + '_')
-    if len(expr) == 0 or expr[0] not in id_firstchars:
-        return None
-    for length in range(len(expr)):
-        if expr[length] not in id_chars:
-            return maybe_keyword_length(expr[:length]) if length > 0 else None
+    return maybe_keyword_length(read_base(expr))
+
 
 def read_string(expr):
     if len(expr) == 0:
@@ -103,6 +104,18 @@ def read_string(expr):
         else:
             i += 1
     return None
+
+
+def read_comment(expr):
+    if len(expr) == 0:
+        return None
+    if expr[0] != '#':
+        return None
+    i = 1
+    while i < len(expr) and expr[i] != '\n':
+        i += 1
+    return i
+
 
 operator_matcher = StringMatcher(
     '+ - * / % ! && || < <= == != >= > = += -= *= /= %= >> << >>= <<= & | ~ &= |= ^ ^= . .. ...'.split()
@@ -124,6 +137,7 @@ token_rules = {
     tokens.Keyword:             read_keyword,
     tokens.String:              read_string,
     tokens.BoolLiteral:         read_bool_literal,
+    tokens.Comment:             read_comment,
 }
 
 
