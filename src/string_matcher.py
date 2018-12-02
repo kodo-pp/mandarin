@@ -36,7 +36,7 @@ class ListMatcher:
         max_length = 0
         max_string = None
         for i in self.ls:
-            if len(i) > max_length and list_starts_with(s, i)
+            if len(i) > max_length and list_starts_with(s, i):
                 max_length = len(i)
                 max_string = i
         return max_string
