@@ -75,6 +75,32 @@ class FunctionDeclarationNode(Node):
         self.func_name, self.args, self.definition = func_name, args, definition
 
 
+class TypeNode(Node):
+    def __init__(self, data):
+        super().__init__(data)
+        self.name = 'ArrayTypeNode'
+
+
+class PrimitiveTypeNode(Node):
+    def __init__(self, data):
+        super().__init__(data)
+        self.name = 'PrimitiveTypeNode'
+
+
+class ArrayTypeNode(TypeNode):
+    def __init__(self, data):
+        super().__init__(data)
+        self.name = 'ArrayTypeNode'
+
+
+class FunctionParameterNode(Node):
+    def __init__(self, vartype, varname):
+        data = vartype, varname
+        self.vartype, self.varname = vartype, varname
+        super().__init__(data)
+        self.name = 'FunctionParameterNode'
+
+
 def split_list_by(ls, by, allow_empty=True):
     last_index = 0
     for i, v in enumerate(ls):
@@ -94,14 +120,44 @@ class ExpressionParser():
     def expect(self, *expected, required=True):
         token = self.tokens[self.offset]
         for Type, name, val in expected:
-            if isinstance(token, Type) and (val is None or token.val == val):
-                self.offset += 1
-                return token
+            if type(Type) is type:
+                if isinstance(token, Type) and (val is None or token.val == val):
+                    self.offset += 1
+                    return [token]
+            else:
+                length = Type(token, val)
+                if length is not None:
+                    self.offset += length
+                    return tokens[:length]   
         names = ['{} ({})'.format(i[1], repr(i[2])) for i in expected]
         if required:
             raise UnexpecterTokenError('Expected one of these: {}; got {}'.format(', '.join(names), token))
         else:
             return None
+
+    def read_typename(self):
+        [base_typename_tok] = self.expect((tok.Identifier, 'typename identifier', None))
+        base_typename = base_typename_tok.val
+        modifiers = []
+        while True:
+            modifier_ls = self.expect(
+                (tok.Bracket, 'opening square bracket', '['),
+                required=False
+            )
+            if modifier_ls is None:
+                break
+            modifier_tok = modifier_ls[0]
+            if isinstance(modifier_tok, tok.Bracket):
+                self.expect((tok.Bracket, 'closing square bracket', ']'))
+                modifiers.append(ArrayTypeNode)
+            else:
+                raise UnexpecterTokenError('Internal logic error: unexpected token: {}'.format(modifier_tok))
+        typename = PrimitiveTypeNode(base_typename)
+        for Type in modifiers:
+            container = Type(data=None)
+            container.add_child(typename)
+            typename = container
+        return typename
 
     def parse_expression(self):
         root = TopLevelNode()
@@ -123,30 +179,53 @@ class ExpressionParser():
     def read_function_declaration(self):
         self.expect((tok.Keyword, 'keyword', 'def'))
         has_body = False
-        later_kw = self.expect((tok.Keyword, 'keyword', 'later'), required=False)
+        [later_kw] = self.expect((tok.Keyword, 'keyword', 'later'), required=False)
         if later_kw is not None:
             has_body = False
-        func_name = self.expect((tok.Identifier, 'identifier', None)).val
+        [func_name_tok] = self.expect((tok.Identifier, 'identifier', None))
+        func_name = func_name_tok.val
         self.expect((tok.Parenthesis, 'opening parenthesis', '('))
         args = []
         while True:
-            arg = self.expect(
-                (tok.Identifier, 'type or variable name', None),
-                (tok.Parenthesis, 'closing parenthesis', ')')
-            )
-            if isinstance(arg, tok.Parenthesis):
+            close_paren_ls = self.expect((tok.Parenthesis, 'closing parenthesis', ')'), required=False)
+            if close_paren_ls is not None:
                 break
-            arg2 = self.expect((tok.Identifier, 'variable name', None), (tok.Comma, 'comma', ','))
-            if isinstance(arg2, tok.Comma):
-                # Typename not specified, treating it as 'var'
-                typename = 'var'
-                varname = arg.val
-                args.append((typename, varname)) # TODO: add Variable class
+            typename = self.read_typename()
+            early_comma_ls = self.expect((tok.Comma, 'comma', ','), required=False)
+            if early_comma_ls is not None:
+                # If we met a comma right after the type name, then it was a variable name, not a type name
+                # Then the typename shouldn't contain anything but an identifier
+                if not isinstance(typename, PrimitiveTypeNode):
+                    raise UnexpecterTokenError('Expected a variable name, got comma')
+                varname = typename.data
+                vartype = PrimitiveTypeNode('var')
+                args.append(FunctionParameterNode(vartype, varname))
+                continue
             else:
-                # Typename explicitly specified, using it
-                typename = arg.val
-                varname = arg2.val
-                args.append((typename, varname)) # TODO: add Variable class
+                early_paren_ls = self.expect((tok.Parenthesis, 'closing parenthesis', ')'), required=False)
+                if early_paren_ls is not None:
+                    # If we met a closing paren right after the type name, then it was the last variable name
+                    if not isinstance(typename, PrimitiveTypeNode):
+                        raise UnexpecterTokenError('Expected a variable name, got closing parenthesis')
+                    varname = typename.data
+                    vartype = PrimitiveTypeNode('var')
+                    args.append(FunctionParameterNode(vartype, varname))
+                    break
+                # Ok, otherwise let's read the variable name
+                vartype = typename
+                [varname_tok] = self.expect((tok.Identifier, 'variable name', None))
+                varname = varname_tok.val
+
+                # And we should make sure there is a comma or a closing paren after this parameter
+                [token] = self.expect((tok.Comma, 'comma', ','), (tok.Parenthesis, 'closing parenthesis', ')'))
+
+                args.append(FunctionParameterNode(vartype, varname))
+
+                # If it is a paren, that was the last parameter
+                if isinstance(token, tok.Parenthesis):
+                    break
+                else:
+                    continue
         self.expect((tok.Newline, 'newline', None))
         node = FunctionDeclarationNode(func_name, args, None)
         return node
