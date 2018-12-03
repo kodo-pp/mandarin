@@ -57,3 +57,10 @@ def main()
     end
 end
 ```
+
+## License
+Compiler code itself (all Python files) are licensed under GNU GPLv3 (see LICENSE file
+and boilerplates in source files).
+
+Tests for compiler and mandarin code examples (including ones in README.md)
+are in public domain (see tests/UNLICENSE)
