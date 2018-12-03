@@ -2,6 +2,11 @@
 
 import weakref
 import src.tokens as tok
+from src.exceptions import MandarinSyntaxError
+
+class UnexpecterTokenError(MandarinSyntaxError):
+    def __init__(self, text):
+        self.text = text
 
 
 class Node:
@@ -47,6 +52,14 @@ class TopLevelDeclarationNode(Node):
         self.name = 'TopLevelDeclarationNode'
     
 
+class FunctionDeclarationNode(Node):
+    def __init__(self, func_name, args, definition):
+        data = func_name, args, definition
+        super().__init__(data)
+        self.name = 'FunctionDeclarationNode'
+        self.func_name, self.args, self.definition = func_name, args, definition
+
+
 def split_list_by(ls, by, allow_empty=True):
     last_index = 0
     for i, v in enumerate(ls):
@@ -58,10 +71,67 @@ def split_list_by(ls, by, allow_empty=True):
         yield ls[last_index:]
 
 
-def parse_expression(tokens):
-    root = TopLevelNode()
-    
-    declarations = split_list_by(tokens, tok.Newline, False)
-    for i in declarations:
-        root.add_child(TopLevelDeclarationNode(i))
-    return root
+class ExpressionParser():
+    def __init__(self, tokens, offset=0):
+        self.tokens = tokens
+        self.offset = offset
+
+    def expect(self, *expected, required=True):
+        token = self.tokens[self.offset]
+        for Type, name, val in expected:
+            if isinstance(token, Type) and (val is None or token.val == val):
+                self.offset += 1
+                return token
+        names = ['{} ({})'.format(i[1], repr(i[2])) for i in expected]
+        if required:
+            raise UnexpecterTokenError('Expected one of these: {}; got {}'.format(', '.join(names), token))
+        else:
+            return None
+
+    def parse_expression(self):
+        root = TopLevelNode()
+        while self.offset < len(self.tokens):
+            token = self.tokens[self.offset]
+            if isinstance(token, tok.Keyword):
+                kw = token.val
+                if kw == 'def':
+                    root.add_child(self.read_function_declaration())
+                else:
+                    raise UnexpecterTokenError('Unexpected keyword: {}'.format(kw))
+            elif isinstance(token, tok.Newline):
+                self.offset += 1
+                continue
+            else:
+                raise UnexpecterTokenError('Unexpected token: {}'.format(token))
+        return root
+
+    def read_function_declaration(self):
+        self.expect((tok.Keyword, 'keyword', 'def'))
+        has_body = False
+        later_kw = self.expect((tok.Keyword, 'keyword', 'later'), required=False)
+        if later_kw is not None:
+            has_body = False
+        func_name = self.expect((tok.Identifier, 'identifier', None)).val
+        self.expect((tok.Parenthesis, 'opening parenthesis', '('))
+        args = []
+        while True:
+            arg = self.expect(
+                (tok.Identifier, 'type or variable name', None),
+                (tok.Parenthesis, 'closing parenthesis', ')')
+            )
+            if isinstance(arg, tok.Parenthesis):
+                break
+            arg2 = self.expect((tok.Identifier, 'variable name', None), (tok.Comma, 'comma', ','))
+            if isinstance(arg2, tok.Comma):
+                # Typename not specified, treating it as 'var'
+                typename = 'var'
+                varname = arg.val
+                args.append((typename, varname)) # TODO: add Variable class
+            else:
+                # Typename explicitly specified, using it
+                typename = arg.val
+                varname = arg2.val
+                args.append((typename, varname)) # TODO: add Variable class
+        self.expect((tok.Newline, 'newline', None))
+        node = FunctionDeclarationNode(func_name, args, None)
+        return node

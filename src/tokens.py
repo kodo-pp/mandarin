@@ -39,7 +39,7 @@ class Token:
         self.name = 'Token'
 
     def __repr__(self):
-        return '{}({})'.format(self.name, self.val)
+        return '{}({})'.format(self.name, repr(self.val))
 
 
 class Operator(Token):

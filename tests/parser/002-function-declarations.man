@@ -1,0 +1,4 @@
+def later foo(x, int y)
+def later bar()
+
+# def later baz(function(int, float) x, float[] y, var z)

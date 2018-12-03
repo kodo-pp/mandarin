@@ -16,7 +16,8 @@ def main():
     with open(sys.argv[1]) as f:
         s = f.read()
     token_list = list(tokens.tokenize(s, token_rules.token_rules, token_rules.ignored_tokens))
-    print(expr.parse_expression(token_list).dump())
+    parser = expr.ExpressionParser(token_list)
+    print(parser.parse_expression().dump())
 
 if __name__ == '__main__':
     main()

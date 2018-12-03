@@ -27,18 +27,7 @@ def is_keyword(s):
         'type',
         'while'
     }
-    typename_kws = {
-        'array',
-        'bool',
-        'float',
-        'function',
-        'int',
-        'string',
-        'tuple',
-        'uint',
-    }
-    kws = core_kws.union(typename_kws)
-    return s in kws
+    return s in core_kws
 
 def is_bool_literal(s):
     return s in {'true', 'false'}
