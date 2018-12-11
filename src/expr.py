@@ -19,9 +19,9 @@ import weakref
 import src.tokens as tok
 from src.exceptions import MandarinSyntaxError
 
-class UnexpecterTokenError(MandarinSyntaxError):
-    def __init__(self, text):
-        self.text = text
+class UnexpectedTokenError(MandarinSyntaxError):
+    def __init__(self, text, posinfo):
+        super().__init__(text=text, posinfo=posinfo)
 
 
 class Node:
@@ -56,48 +56,48 @@ class Node:
 
 
 class TopLevelNode(Node):
-    def __init__(self):
-        super().__init__(None)
+    def __init__(self, **kwargs):
+        super().__init__(data=None, **kwargs)
         self.name = 'TopLevelNode'
 
 
 class TopLevelDeclarationNode(Node):
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, data, **kwargs):
+        super().__init__(data=data, **kwargs)
         self.name = 'TopLevelDeclarationNode'
     
 
 class FunctionDeclarationNode(Node):
-    def __init__(self, func_name, args, definition):
+    def __init__(self, func_name, args, definition, **kwargs):
         data = func_name, args, definition
-        super().__init__(data)
+        super().__init__(data=data, **kwargs)
         self.name = 'FunctionDeclarationNode'
         self.func_name, self.args, self.definition = func_name, args, definition
 
 
 class TypeNode(Node):
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, data, **kwargs):
+        super().__init__(data=data, **kwargs)
         self.name = 'ArrayTypeNode'
 
 
 class PrimitiveTypeNode(Node):
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, data, **kwargs):
+        super().__init__(data=data, **kwargs)
         self.name = 'PrimitiveTypeNode'
 
 
 class ArrayTypeNode(TypeNode):
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, data, **kwargs):
+        super().__init__(data=data, **kwargs)
         self.name = 'ArrayTypeNode'
 
 
 class FunctionParameterNode(Node):
-    def __init__(self, vartype, varname):
+    def __init__(self, vartype, varname, **kwargs):
         data = vartype, varname
         self.vartype, self.varname = vartype, varname
-        super().__init__(data)
+        super().__init__(data=data, **kwargs)
         self.name = 'FunctionParameterNode'
 
 
@@ -131,7 +131,10 @@ class ExpressionParser():
                     return tokens[:length]   
         names = ['{} ({})'.format(i[1], repr(i[2])) for i in expected]
         if required:
-            raise UnexpecterTokenError('Expected one of these: {}; got {}'.format(', '.join(names), token))
+            raise UnexpectedTokenError(
+                'Expected one of these: {}; got {}'.format(', '.join(names), token),
+                posinfo=token.posinfo
+            )
         else:
             return None
 
@@ -151,7 +154,7 @@ class ExpressionParser():
                 self.expect((tok.Bracket, 'closing square bracket', ']'))
                 modifiers.append(ArrayTypeNode)
             else:
-                raise UnexpecterTokenError('Internal logic error: unexpected token: {}'.format(modifier_tok))
+                raise UnexpectedTokenError('Internal logic error: unexpected token: {}'.format(modifier_tok))
         typename = PrimitiveTypeNode(base_typename)
         for Type in modifiers:
             container = Type(data=None)
@@ -168,19 +171,19 @@ class ExpressionParser():
                 if kw == 'def':
                     root.add_child(self.read_function_declaration())
                 else:
-                    raise UnexpecterTokenError('Unexpected keyword: {}'.format(kw))
+                    raise UnexpectedTokenError('Unexpected keyword: {}'.format(kw))
             elif isinstance(token, tok.Newline):
                 self.offset += 1
                 continue
             else:
-                raise UnexpecterTokenError('Unexpected token: {}'.format(token))
+                raise UnexpectedTokenError('Unexpected token: {}'.format(token), posinfo=token.posinfo)
         return root
 
     def read_function_declaration(self):
         self.expect((tok.Keyword, 'keyword', 'def'))
-        has_body = False
-        [later_kw] = self.expect((tok.Keyword, 'keyword', 'later'), required=False)
-        if later_kw is not None:
+        has_body = True
+        native_kw_ls = self.expect((tok.Keyword, 'keyword', 'native'), required=False)
+        if native_kw_ls is not None:
             has_body = False
         [func_name_tok] = self.expect((tok.Identifier, 'identifier', None))
         func_name = func_name_tok.val
@@ -196,7 +199,7 @@ class ExpressionParser():
                 # If we met a comma right after the type name, then it was a variable name, not a type name
                 # Then the typename shouldn't contain anything but an identifier
                 if not isinstance(typename, PrimitiveTypeNode):
-                    raise UnexpecterTokenError('Expected a variable name, got comma')
+                    raise UnexpectedTokenError('Expected a variable name, got comma')
                 varname = typename.data
                 vartype = PrimitiveTypeNode('var')
                 args.append(FunctionParameterNode(vartype, varname))
@@ -206,7 +209,7 @@ class ExpressionParser():
                 if early_paren_ls is not None:
                     # If we met a closing paren right after the type name, then it was the last variable name
                     if not isinstance(typename, PrimitiveTypeNode):
-                        raise UnexpecterTokenError('Expected a variable name, got closing parenthesis')
+                        raise UnexpectedTokenError('Expected a variable name, got closing parenthesis')
                     varname = typename.data
                     vartype = PrimitiveTypeNode('var')
                     args.append(FunctionParameterNode(vartype, varname))

@@ -15,10 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-class MandarinSyntaxError(RuntimeError):
-    def __init__(self, text, posinfo):
-        self.text = text
-        self.posinfo = posinfo
+class Posinfo:
+    def __init__(self, line=1, col=1):
+        self.line = line
+        self.col = col
 
-    def __str__(self):
-        return str(self.text) + ' (line {}, col {})'.format(self.posinfo.line, self.posinfo.col)
+    def colshift(self, n=1):
+        self.col += n
+
+    def newline(self, n=1):
+        self.col = 1
+        self.line += n
+
+    def str(self, s):
+        newlines = s.count('\n')
+        col_offset = len(s.split('\n')[-1])
+        self.col = col_offset + 1
+        self.line += newlines
