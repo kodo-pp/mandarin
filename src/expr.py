@@ -19,7 +19,7 @@ import weakref
 import src.tokens as tok
 from src.exceptions import MandarinSyntaxError
 
-class UnexpecterTokenError(MandarinSyntaxError):
+class UnexpectedTokenError(MandarinSyntaxError):
     def __init__(self, text):
         self.text = text
 
@@ -46,12 +46,28 @@ class Node:
     def __repr__(self):
         return '{}({})'.format(self.name, repr(self.data))
 
-    def dump(self, nest=0):
-        s = '{}({}) {{\n'.format(self.name, self.data)
+    # def dumb
+    def dump(self, nest=0, nl=True):
+        # TODO: Please delete this code
+        s = '{}({}) {{'.format(
+            self.name,
+            '[' + ', '.join(
+                [i.dump(nest + 1, False) if isinstance(i, Node) else repr(i) for i in self.data]
+            ) + ']'
+                if isinstance(self.data, list) or isinstance(self.data, tuple) else
+            self.data
+        ) + ('\n' if nl else '')
+        t = False
         for i in self.children:
-            s += '  ' * (nest + 1)
-            s += i.dump(nest + 1)
-        s += '  ' * nest + '}\n'
+            if nl:
+                s += '  ' * (nest + 1)
+            else:
+                if t:
+                    s += ', '
+                else:
+                    t = True
+            s += i.dump(nest + 1, nl)
+        s += (('  ' * nest) if nl else '') + '}' + ('\n' if nl else '')
         return s
 
 
@@ -107,6 +123,18 @@ class FunctionParameterNode(Node):
         self.name = 'FunctionParameterNode'
 
 
+class CodeBlockNode(TypeNode):
+    def __init__(self):
+        super().__init__(data=None)
+        self.name = 'CodeBlockNode'
+
+
+class ExpressionNode(TypeNode):
+    def __init__(self):
+        super().__init__(data=None)
+        self.name = 'ExpressionNode'
+
+
 def split_list_by(ls, by, allow_empty=True):
     last_index = 0
     for i, v in enumerate(ls):
@@ -124,6 +152,11 @@ class ExpressionParser():
         self.offset = offset
 
     def expect(self, *expected, required=True):
+        if self.offset >= len(self.tokens):
+            if required:
+                raise UnexpectedTokenError('Unexpected EOF')
+            else:
+                return None
         token = self.tokens[self.offset]
         for Type, name, val in expected:
             if type(Type) is type:
@@ -137,7 +170,7 @@ class ExpressionParser():
                     return tokens[:length]   
         names = ['{} ({})'.format(i[1], repr(i[2])) for i in expected]
         if required:
-            raise UnexpecterTokenError('Expected one of these: {}; got {}'.format(', '.join(names), token))
+            raise UnexpectedTokenError('Expected one of these: {}; got {}'.format(', '.join(names), token))
         else:
             return None
 
@@ -157,7 +190,7 @@ class ExpressionParser():
                 self.expect((tok.Bracket, 'closing square bracket', ']'))
                 modifiers.append(ArrayTypeNode)
             else:
-                raise UnexpecterTokenError('Internal logic error: unexpected token: {}'.format(modifier_tok))
+                raise UnexpectedTokenError('Internal logic error: unexpected token: {}'.format(modifier_tok))
         typename = PrimitiveTypeNode(base_typename)
         for Type in modifiers:
             container = Type(data=None)
@@ -174,13 +207,18 @@ class ExpressionParser():
                 if kw == 'def':
                     root.add_child(self.read_function_definition())
                 else:
-                    raise UnexpecterTokenError('Unexpected keyword: {}'.format(kw))
+                    raise UnexpectedTokenError('Unexpected keyword: {}'.format(kw))
             elif isinstance(token, tok.Newline):
                 self.offset += 1
                 continue
             else:
-                raise UnexpecterTokenError('Unexpected token: {}'.format(token))
+                raise UnexpectedTokenError('Unexpected token: {}'.format(token))
         return root
+
+    def unget_tokens(self, n=1):
+        if n > self.offset:
+            raise Exception('Unable to unget {} tokens - only {} were read'.format(n, self.offset))
+        self.offset -= n
 
     def read_code_block(self):
         node = CodeBlockNode()
@@ -189,21 +227,32 @@ class ExpressionParser():
             if statement is None:
                 break
             node.add_child(statement)
+        return node
 
     def read_code_statement(self):
         while True:
-            what = self.expect(
+            [what] = self.expect(
                 (tok.Newline, 'newline', None),
                 (tok.Keyword, 'keyword', 'end'),
                 (tok.Operand, 'operand', None)
             )
             if isinstance(what, tok.Newline):
                 continue
-            elif isinstance(what, tok.Keyword) and tok.val == 'end':
+            elif isinstance(what, tok.Keyword) and what.val == 'end':
                 return None
             elif isinstance(what, tok.Operand):
                 self.unget_tokens(1)
-                self.read_expression
+                return self.read_expression()
+
+    def read_expression(self):
+        # TODO: Stub, just reads tokens until a newline
+        node = ExpressionNode()
+        while True:
+            [token] = self.expect((tok.Token, 'any token', None))
+            if isinstance(token, tok.Newline):
+                break
+            node.add_child(Node(data=token))
+        return node
 
     def read_function_definition(self):
         self.expect((tok.Keyword, 'keyword', 'def'))
@@ -225,7 +274,7 @@ class ExpressionParser():
                 # If we met a comma right after the type name, then it was a variable name, not a type name
                 # Then the typename shouldn't contain anything but an identifier
                 if not isinstance(typename, PrimitiveTypeNode):
-                    raise UnexpecterTokenError('Expected a variable name, got comma')
+                    raise UnexpectedTokenError('Expected a variable name, got comma')
                 varname = typename.data
                 vartype = PrimitiveTypeNode('var')
                 args.append(FunctionParameterNode(vartype, varname))
@@ -235,7 +284,7 @@ class ExpressionParser():
                 if early_paren_ls is not None:
                     # If we met a closing paren right after the type name, then it was the last variable name
                     if not isinstance(typename, PrimitiveTypeNode):
-                        raise UnexpecterTokenError('Expected a variable name, got closing parenthesis')
+                        raise UnexpectedTokenError('Expected a variable name, got closing parenthesis')
                     varname = typename.data
                     vartype = PrimitiveTypeNode('var')
                     args.append(FunctionParameterNode(vartype, varname))

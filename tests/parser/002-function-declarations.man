@@ -2,4 +2,7 @@ def native foo(x, int y)
 def native bar()
 def native baz(a, b, c)
 
+def empty_body(a, b, c)
+end
+
 # def native baz1(function(int, float) x, float[] y, var z)
