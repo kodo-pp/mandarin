@@ -15,13 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 import re
+from copy import deepcopy
+
 import src.exceptions as exceptions
+from src.posinfo import Posinfo
 
 
 class UnknownTokenError(exceptions.MandarinSyntaxError):
-    def __init__(self, token):
+    def __init__(self, token, posinfo):
         text = 'unknown token in expression: ' + repr(token)
-        super().__init__(text)
+        super().__init__(text=text, posinfo=posinfo)
         self.token = token
 
     def __repr__(self):
@@ -32,12 +35,12 @@ class UnknownTokenError(exceptions.MandarinSyntaxError):
 
 
 class AmbiguousTokenError(exceptions.MandarinSyntaxError):
-    def __init__(self, token, matches):
+    def __init__(self, token, matches, posinfo):
         text = 'ambiguous token in expression: {}. It matches at least these token rules:\n{}'.format(
             repr(token),
             '\n'.join(['\t-> {} (match {})'.format(repr(s), repr(token[:n])) for n, s in matches])
         )
-        super().__init__(text)
+        super().__init__(text=text, posinfo=posinfo)
         self.token = token
         self.matches = matches
 
@@ -49,149 +52,150 @@ class AmbiguousTokenError(exceptions.MandarinSyntaxError):
 
 
 class Token:
-    def __init__(self, val):
+    def __init__(self, val, posinfo=None):
         self.val = val
         self.name = 'Token'
+        self.posinfo = posinfo
 
     def __repr__(self):
         return '{}({})'.format(self.name, repr(self.val))
 
 
 class Operator(Token):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Operator'
 
 
 class Operand(Token):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Operand'
 
 
 class Whitespace(Token):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Whitespace'
 
 
 class SyntaxConstruction(Token):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'SyntaxConstruction'
 
 
 class Newline(SyntaxConstruction):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Newline'
 
 
 class Literal(Operand):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Literal'
 
 
 class Integer(Literal):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Integer'
 
 
 class BoolLiteral(Literal):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'BoolLiteral'
 
 
 class DecimalInteger(Integer):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'DecimalInteger'
 
 
 class HexadecimalInteger(Integer):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'HexadecimalInteger'
 
 
 class OctalInteger(Integer):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'OctalInteger'
 
 
 class BinaryInteger(Integer):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'BinaryInteger'
 
 
 class String(Literal):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'String'
 
 
 class Float(Literal):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Float'
 
 
 class Identifier(Operand):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Identifier'
 
 
 class Punctuation(SyntaxConstruction):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Punctuation'
 
 
 class Parenthesis(Punctuation):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Parenthesis'
 
 
 class Bracket(Punctuation):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Bracket'
 
 
 class Brace(Punctuation):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Brace'
 
 
 class Comma(Punctuation):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Comma'
 
 
 class Colon(Punctuation):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Colon'
 
 
 class Keyword(SyntaxConstruction):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Keyword'
 
 
 class Comment(Token):
-    def __init__(self, val):
-        super().__init__(val=val)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.name = 'Comment'
 
 
@@ -203,13 +207,15 @@ def is_token_ignored(token, ignlist):
 
 
 def tokenize(expr, token_rules, ignored_tokens):
+    pi = Posinfo()
     while len(expr) > 0:
-        token, expr = read_token(expr, token_rules)
+        token, expr, pi = read_token(expr, token_rules, pi)
         if not is_token_ignored(token, ignored_tokens):
             yield token
 
 
-def read_token(expr, token_rules):
+def read_token(expr, token_rules, posinfo):
+    pi = deepcopy(posinfo)
     matches = []
     for Type, regex in token_rules.items():
         if type(regex) is str:
@@ -227,7 +233,7 @@ def read_token(expr, token_rules):
 
     matches = list(reversed(sorted(matches, key=lambda x: x[0])))
     if len(matches) == 0:
-        raise UnknownTokenError(expr)
+        raise UnknownTokenError(expr, posinfo=pi)
     max_length = matches[0][0]
 
     longest_matches = []
@@ -236,7 +242,9 @@ def read_token(expr, token_rules):
             longest_matches.append(i)
 
     if len(longest_matches) >= 2:
-        raise AmbiguousTokenError(expr, longest_matches)
+        raise AmbiguousTokenError(expr, longest_matches, posinfo=pi)
     else:
         length, Type = longest_matches[0]
-        return Type(expr[:length]), expr[length:]
+        token = Type(val=expr[:length], posinfo=pi)
+        pi.str(expr[:length])
+        return token, expr[length:], pi

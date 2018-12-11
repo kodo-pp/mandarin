@@ -20,8 +20,8 @@ import src.tokens as tok
 from src.exceptions import MandarinSyntaxError
 
 class UnexpectedTokenError(MandarinSyntaxError):
-    def __init__(self, text):
-        self.text = text
+    def __init__(self, text, posinfo):
+        super().__init__(text=text, posinfo=posinfo)
 
 
 class Node:
@@ -72,21 +72,20 @@ class Node:
 
 
 class TopLevelNode(Node):
-    def __init__(self):
-        super().__init__(None)
+    def __init__(self, **kwargs):
+        super().__init__(data=None, **kwargs)
         self.name = 'TopLevelNode'
 
 
 class TopLevelDeclarationNode(Node):
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, data, **kwargs):
+        super().__init__(data=data, **kwargs)
         self.name = 'TopLevelDeclarationNode'
 
-
 class FunctionDefinitionNode(Node):
-    def __init__(self, func_name, args, definition):
+    def __init__(self, func_name, args, definition, **kwargs):
         data = func_name, args, definition
-        super().__init__(data)
+        super().__init__(data=data, **kwargs)
         self.name = 'FunctionDefinitionNode'
         self.func_name, self.args, self.definition = func_name, args, definition
     
@@ -98,28 +97,28 @@ class NativeFunctionDefinitionNode(FunctionDefinitionNode):
 
 
 class TypeNode(Node):
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, data, **kwargs):
+        super().__init__(data=data, **kwargs)
         self.name = 'ArrayTypeNode'
 
 
 class PrimitiveTypeNode(Node):
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, data, **kwargs):
+        super().__init__(data=data, **kwargs)
         self.name = 'PrimitiveTypeNode'
 
 
 class ArrayTypeNode(TypeNode):
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, data, **kwargs):
+        super().__init__(data=data, **kwargs)
         self.name = 'ArrayTypeNode'
 
 
 class FunctionParameterNode(Node):
-    def __init__(self, vartype, varname):
+    def __init__(self, vartype, varname, **kwargs):
         data = vartype, varname
         self.vartype, self.varname = vartype, varname
-        super().__init__(data)
+        super().__init__(data=data, **kwargs)
         self.name = 'FunctionParameterNode'
 
 
@@ -170,7 +169,10 @@ class ExpressionParser():
                     return tokens[:length]   
         names = ['{} ({})'.format(i[1], repr(i[2])) for i in expected]
         if required:
-            raise UnexpectedTokenError('Expected one of these: {}; got {}'.format(', '.join(names), token))
+            raise UnexpectedTokenError(
+                'Expected one of these: {}; got {}'.format(', '.join(names), token),
+                posinfo=token.posinfo
+            )
         else:
             return None
 
@@ -212,7 +214,7 @@ class ExpressionParser():
                 self.offset += 1
                 continue
             else:
-                raise UnexpectedTokenError('Unexpected token: {}'.format(token))
+                raise UnexpectedTokenError('Unexpected token: {}'.format(token), posinfo=token.posinfo)
         return root
 
     def unget_tokens(self, n=1):
