@@ -65,14 +65,20 @@ class TopLevelDeclarationNode(Node):
     def __init__(self, data):
         super().__init__(data)
         self.name = 'TopLevelDeclarationNode'
-    
 
-class FunctionDeclarationNode(Node):
+
+class FunctionDefinitionNode(Node):
     def __init__(self, func_name, args, definition):
         data = func_name, args, definition
         super().__init__(data)
-        self.name = 'FunctionDeclarationNode'
+        self.name = 'FunctionDefinitionNode'
         self.func_name, self.args, self.definition = func_name, args, definition
+    
+
+class NativeFunctionDefinitionNode(FunctionDefinitionNode):
+    def __init__(self, func_name, args):
+        super().__init__(func_name, args, None)
+        self.name = 'NativeFunctionDefinitionNode'
 
 
 class TypeNode(Node):
@@ -166,7 +172,7 @@ class ExpressionParser():
             if isinstance(token, tok.Keyword):
                 kw = token.val
                 if kw == 'def':
-                    root.add_child(self.read_function_declaration())
+                    root.add_child(self.read_function_definition())
                 else:
                     raise UnexpecterTokenError('Unexpected keyword: {}'.format(kw))
             elif isinstance(token, tok.Newline):
@@ -176,11 +182,34 @@ class ExpressionParser():
                 raise UnexpecterTokenError('Unexpected token: {}'.format(token))
         return root
 
-    def read_function_declaration(self):
+    def read_code_block(self):
+        node = CodeBlockNode()
+        while True:
+            statement = self.read_code_statement()
+            if statement is None:
+                break
+            node.add_child(statement)
+
+    def read_code_statement(self):
+        while True:
+            what = self.expect(
+                (tok.Newline, 'newline', None),
+                (tok.Keyword, 'keyword', 'end'),
+                (tok.Operand, 'operand', None)
+            )
+            if isinstance(what, tok.Newline):
+                continue
+            elif isinstance(what, tok.Keyword) and tok.val == 'end':
+                return None
+            elif isinstance(what, tok.Operand):
+                self.unget_tokens(1)
+                self.read_expression
+
+    def read_function_definition(self):
         self.expect((tok.Keyword, 'keyword', 'def'))
-        has_body = False
-        [later_kw] = self.expect((tok.Keyword, 'keyword', 'later'), required=False)
-        if later_kw is not None:
+        has_body = True
+        native_kw_ls = self.expect((tok.Keyword, 'keyword', 'native'), required=False)
+        if native_kw_ls is not None:
             has_body = False
         [func_name_tok] = self.expect((tok.Identifier, 'identifier', None))
         func_name = func_name_tok.val
@@ -227,5 +256,7 @@ class ExpressionParser():
                 else:
                     continue
         self.expect((tok.Newline, 'newline', None))
-        node = FunctionDeclarationNode(func_name, args, None)
-        return node
+        if has_body:
+            body = self.read_code_block()
+            return FunctionDefinitionNode(func_name, args, body)
+        return NativeFunctionDefinitionNode(func_name, args)
