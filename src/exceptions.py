@@ -15,10 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-class MandarinSyntaxError(RuntimeError):
+class MandarinError(RuntimeError):
     def __init__(self, text, posinfo):
         self.text = text
         self.posinfo = posinfo
 
     def __str__(self):
         return str(self.text) + ' (line {}, col {})'.format(self.posinfo.line, self.posinfo.col)
+
+
+class MandarinSyntaxError(MandarinError):
+    def __init__(*args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class MandarinNotImplementedError(MandarinError):
+    def __init__(*args, **kwargs):
+        super().__init__(*args, **kwargs)

@@ -82,6 +82,7 @@ class TopLevelDeclarationNode(Node):
         super().__init__(data=data, **kwargs)
         self.name = 'TopLevelDeclarationNode'
 
+
 class FunctionDefinitionNode(Node):
     def __init__(self, func_name, args, definition, **kwargs):
         data = func_name, args, definition
@@ -183,6 +184,7 @@ class ExpressionParser():
         while True:
             modifier_ls = self.expect(
                 (tok.Bracket, 'opening square bracket', '['),
+                (tok.Parenthesis, 'opening parenthesis', '('),
                 required=False
             )
             if modifier_ls is None:
@@ -191,6 +193,8 @@ class ExpressionParser():
             if isinstance(modifier_tok, tok.Bracket):
                 self.expect((tok.Bracket, 'closing square bracket', ']'))
                 modifiers.append(ArrayTypeNode)
+            elif isinstance(modifier_tok, tok.Parenthesis):
+                raise exceptions.MandarinNotImplementedError('Templates are not implemented')
             else:
                 raise UnexpectedTokenError('Internal logic error: unexpected token: {}'.format(modifier_tok))
         typename = PrimitiveTypeNode(base_typename)
@@ -247,13 +251,75 @@ class ExpressionParser():
                 return self.read_expression()
 
     def read_expression(self):
+        # This functions just reads an expression and return a list of tokens; it doesn't parse
+        # the expression
         # TODO: Stub, just reads tokens until a newline
+        # TODO: Allow newlines in nested expressions
         node = ExpressionNode()
+        [token] = self.expect(
+            # TODO: add arrays and dictionaries
+            (tok.Operator, 'unary operator', None),
+            (tok.Operand, 'operand', None),
+            (tok.Parenthesis, 'opening parenthesis', '('),
+            (tok.Newline, 'newline', '\n')
+        )
         while True:
-            [token] = self.expect((tok.Token, 'any token', None))
+            # (1) Check if we should stop reading
             if isinstance(token, tok.Newline):
                 break
-            node.add_child(Node(data=token))
+            
+            # (2) Append current node to root node if we should
+            if not isinstance(token, tok.Punctuation):
+                node.add_child(Node(data=token))
+
+            # (3) Depending on which token we have read, expect the next one to be of specific type
+            if isinstance(token, tok.Operator):
+                [token] = self.expect(
+                    (tok.Operator, 'unary operator', None),
+                    (tok.Operand, 'operand', None),
+                    (tok.Parenthesis, 'opening parenthesis', '(')
+                )
+            elif isinstance(token, tok.Operand):
+                token_ls = self.expect(
+                    (tok.Operator, 'unary operator', None),
+                    (tok.Parenthesis, 'opening parenthesis', '('),
+                    (tok.Newline, 'newline', '\n'),
+                    required=False
+                )
+                # An operand can end the expression
+                if token_ls is None:
+                    break
+                else:
+                    [token] = token_ls
+            elif isinstance(token, tok.Parenthesis) and token.val == '(':
+                # An opening parenthesis can mean 2 things: (1) function call or (2) sub-expression
+                # Example (1): 7 + foo(23, 2)
+                # Example (2): 7 * (3 + 1)
+                # In the first case the parenthesis is following an operand,
+                # and in the second case it is following an operator OR it is the first token in the
+                # expression
+
+                # TODO
+                if len(node.children) == 0 or isinstance(node.children[-1], OperatorTokenNode):
+                    # Sub-expression
+                    node.add_child(self.read_expression())
+                elif isinstance(node.children[-1].data, tok.Operand):
+                    # Function call
+                    node.add_child(self.read_function_call())
+                self.expect((tok.Parenthesis, 'closing parenthesis', ')'))
+
+                # Closing parenthesis acts like an operand
+                token_ls = self.expect(
+                    (tok.Operator, 'unary operator', None),
+                    (tok.Parenthesis, 'opening parenthesis', '('),
+                    (tok.Newline, 'newline', '\n'),
+                    required=False
+                )
+                # It can end the expression
+                if token_ls is None:
+                    break
+                else:
+                    [token] = token_ls
         return node
 
     def read_function_definition(self):
