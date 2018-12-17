@@ -16,12 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import src.tokens as tokens
-import src.token_rules as token_rules
-import src.expr as expr
 import readline
 import sys
 import os
+
+import src.tokens as tokens
+import src.token_rules as token_rules
+import src.expr as expr
+import src.fmt as fmt
+from src.exceptions import MandarinSyntaxError
 
 
 def main():
@@ -30,9 +33,13 @@ def main():
         os._exit(1)
     with open(sys.argv[1]) as f:
         s = f.read()
-    token_list = list(tokens.tokenize(s, token_rules.token_rules, token_rules.ignored_tokens))
-    parser = expr.ExpressionParser(token_list)
-    print(parser.parse_expression().dump())
+    try:
+        token_list = list(tokens.tokenize(s, token_rules.token_rules, token_rules.ignored_tokens))
+        parser = expr.ExpressionParser(token_list)
+        print(parser.parse_expression().dump())
+    except MandarinSyntaxError as e:
+        print(fmt.error('Syntax error: ') + str(e))
+        os._exit(1)
 
 if __name__ == '__main__':
     main()
