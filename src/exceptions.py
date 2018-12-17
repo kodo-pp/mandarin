@@ -25,10 +25,10 @@ class MandarinError(RuntimeError):
 
 
 class MandarinSyntaxError(MandarinError):
-    def __init__(*args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
 class MandarinNotImplementedError(MandarinError):
-    def __init__(*args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

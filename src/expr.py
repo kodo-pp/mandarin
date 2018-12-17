@@ -135,6 +135,24 @@ class ExpressionNode(TypeNode):
         self.name = 'ExpressionNode'
 
 
+class OperatorTokenNode(Node):
+    def __init__(self, data):
+        super().__init__(data=data)
+        self.name = 'OperatorTokenNode'
+
+
+class OperandNode(Node):
+    def __init__(self, data):
+        super().__init__(data=data)
+        self.name = 'OperandNode'
+
+
+class FunctionCallNode(Node):
+    def __init__(self, data):
+        super().__init__(data=data)
+        self.name = 'FunctionCallNode'
+
+
 def split_list_by(ls, by, allow_empty=True):
     last_index = 0
     for i, v in enumerate(ls):
@@ -256,30 +274,32 @@ class ExpressionParser():
         # TODO: Stub, just reads tokens until a newline
         # TODO: Allow newlines in nested expressions
         node = ExpressionNode()
-        [token] = self.expect(
+        token_ls = self.expect(
             # TODO: add arrays and dictionaries
             (tok.Operator, 'unary operator', None),
             (tok.Operand, 'operand', None),
             (tok.Parenthesis, 'opening parenthesis', '('),
-            (tok.Newline, 'newline', '\n')
+            (tok.Newline, 'newline', '\n'),
+            required=False
         )
+        if token_ls is None:
+            return None
+        [token] = token_ls
         while True:
             # (1) Check if we should stop reading
             if isinstance(token, tok.Newline):
                 break
-            
-            # (2) Append current node to root node if we should
-            if not isinstance(token, tok.Punctuation):
-                node.add_child(Node(data=token))
 
-            # (3) Depending on which token we have read, expect the next one to be of specific type
+            # (2) Depending on which token we have read, expect the next one to be of specific type
             if isinstance(token, tok.Operator):
+                node.add_child(OperatorTokenNode(token))
                 [token] = self.expect(
                     (tok.Operator, 'unary operator', None),
                     (tok.Operand, 'operand', None),
                     (tok.Parenthesis, 'opening parenthesis', '(')
                 )
             elif isinstance(token, tok.Operand):
+                node.add_child(OperandNode(token))
                 token_ls = self.expect(
                     (tok.Operator, 'unary operator', None),
                     (tok.Parenthesis, 'opening parenthesis', '('),
@@ -317,10 +337,34 @@ class ExpressionParser():
                 )
                 # It can end the expression
                 if token_ls is None:
+                    self.unget_tokens(1)
                     break
                 else:
                     [token] = token_ls
         return node
+
+    def read_function_call(self):
+        node = FunctionCallNode(None)
+        maybe_paren = self.expect(
+            (tok.Parenthesis, 'closing parenthesis', ')'),
+            required=False
+        )
+        if maybe_paren is not None:
+            self.unget_tokens(1)
+            return node
+        while True:
+            x = self.read_expression()
+            if x is None:
+                raise UnexpectedTokenError('Expected expression', self.tokens[self.offset].posinfo)
+            node.add_child(x)
+            [paren_or_comma] = self.expect(
+                (tok.Parenthesis, 'closing parenthesis', ')'),
+                (tok.Comma, 'comma', ',')
+            )
+            if isinstance(paren_or_comma, tok.Parenthesis):
+                self.unget_tokens(1)
+                return node
+
 
     def read_function_definition(self):
         self.expect((tok.Keyword, 'keyword', 'def'))
