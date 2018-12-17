@@ -1,5 +1,7 @@
 # Mandarin
-A programming language intended to be simple and beautiful
+A programming language intended to be simple and beautiful. Please don't ask
+me why I have chosen this name, I'll only say it has nothing to do with the world's
+most popular human language
 
 ***In development***
 
