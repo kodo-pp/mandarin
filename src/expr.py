@@ -337,7 +337,6 @@ class ExpressionParser():
                 )
                 # It can end the expression
                 if token_ls is None:
-                    self.unget_tokens(1)
                     break
                 else:
                     [token] = token_ls
