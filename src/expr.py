@@ -49,25 +49,25 @@ class Node:
     # def dumb
     def dump(self, nest=0, nl=True):
         # TODO: Please delete this code
-        s = '{}({}) {{'.format(
-            self.name,
-            '[' + ', '.join(
-                [i.dump(nest + 1, False) if isinstance(i, Node) else repr(i) for i in self.data]
-            ) + ']'
-                if isinstance(self.data, list) or isinstance(self.data, tuple) else
-            self.data
-        ) + ('\n' if nl else '')
-        t = False
-        for i in self.children:
-            if nl:
-                s += '  ' * (nest + 1)
-            else:
-                if t:
-                    s += ', '
-                else:
-                    t = True
-            s += i.dump(nest + 1, nl)
-        s += (('  ' * nest) if nl else '') + '}' + ('\n' if nl else '')
+        if isinstance(self.data, list) or isinstance(self.data, tuple):
+            s = '{}({}) {{\n'.format(
+                self.name,
+                '[' + ', '.join(
+                    [i.dump(nest + 1) if isinstance(i, Node) else repr(i) for i in self.data]
+                ) + ']'
+            )
+        else:
+            s = '{}({}) {{\n'.format(
+                self.name,
+                self.data if self.data is not None else ''
+            )
+        if len(self.children) == 0:
+            s = s[:-1] + '}\n'
+        else:
+            for i in self.children:
+                s += '    ' * (nest + 1)
+                s += i.dump(nest + 1, nl)
+            s += '    ' * nest + '}' + '\n'
         return s
 
 
