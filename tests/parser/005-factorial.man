@@ -1,0 +1,8 @@
+def main()
+    n = Int(input())
+    a = 1
+    for i in 2...n
+        a *= i
+    end
+    print(a)
+end

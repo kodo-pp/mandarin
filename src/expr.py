@@ -147,6 +147,12 @@ class OperandNode(Node):
         self.name = 'OperandNode'
 
 
+class IdentifierNode(OperandNode):
+    def __init__(self, data):
+        super().__init__(data=data)
+        self.name = 'IdentifierNode'
+
+
 class FunctionCallNode(Node):
     def __init__(self, data):
         super().__init__(data=data)
@@ -157,6 +163,12 @@ class ConditionNode(Node):
     def __init__(self):
         super().__init__(data=None)
         self.name = 'ConditionNode'
+
+
+class ForLoopNode(Node):
+    def __init__(self):
+        super().__init__(data=None)
+        self.name = 'ForLoopNode'
 
 
 class BranchNode(Node):
@@ -322,6 +334,7 @@ class ExpressionParser():
                 (tok.Keyword, 'keyword', 'else'),
                 (tok.Keyword, 'keyword', 'if'),
                 (tok.Keyword, 'keyword', 'elif'),
+                (tok.Keyword, 'keyword', 'for'),
                 (tok.Operand, 'operand', None),
                 (tok.Operator, 'unary operator', None),
                 (tok.Parenthesis, 'opening parenthesis', '('),
@@ -355,6 +368,16 @@ class ExpressionParser():
                         blk = self.read_code_block()
                         node.add_child(FalseBranchNode(block=blk))
                         break
+                return node
+            elif isinstance(what, tok.Keyword) and what.val == 'for':
+                node = ForLoopNode()
+                [var] = self.expect((tok.Identifier, 'loop variable name', None))
+                self.expect((tok.Keyword, 'keyword', 'in'))
+                iter_range = self.read_expression()
+                blk = self.read_code_block()
+                node.add_child(IdentifierNode(var))
+                node.add_child(iter_range)
+                node.add_child(blk)
                 return node
             elif isinstance(what, tok.Operand) \
                     or isinstance(what, tok.Operator) \
