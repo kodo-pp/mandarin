@@ -31,8 +31,8 @@ class Node:
         self.children = []
         self.parent = None
 
-    def add_child(self, child):
-        if child.parent is not None:
+    def add_child(self, child, adopt=False):
+        if child.parent is not None and not adopt:
             raise Exception('Node already has a parent')
         self.children.append(child)
         child.parent = weakref.ref(self)
@@ -188,6 +188,32 @@ class FalseBranchNode(BranchNode):
         self.name = 'FalseBranchNode'
 
 
+class AstOperatorNode(Node):
+    def __init__(self, operands):
+        super().__init__(data=None)
+        self.name = 'AstOperatorNode'
+        for i in operands:
+            self.add_child(i, adopt = True)
+
+
+class AstUnaryOperatorNode(AstOperatorNode):
+    def __init__(self, op):
+        super().__init__(operands=[op])
+        self.name = 'AstUnaryOperatorNode'
+
+
+class AstBinaryOperatorNode(AstOperatorNode):
+    def __init__(self, lhs, rhs):
+        super().__init__(operands=[lhs, rhs])
+        self.name = 'AstBinaryOperatorNode'
+
+
+class AstCallOperatorNode(AstBinaryOperatorNode):
+    def __init__(self, func, args_node):
+        super().__init__(lhs=func, rhs=args_node)
+        self.name = 'AstCallOperatorNode'
+
+
 def split_list_by(ls, by, allow_empty=True):
     last_index = 0
     for i, v in enumerate(ls):
@@ -296,7 +322,9 @@ class ExpressionParser():
                 (tok.Keyword, 'keyword', 'else'),
                 (tok.Keyword, 'keyword', 'if'),
                 (tok.Keyword, 'keyword', 'elif'),
-                (tok.Operand, 'operand', None)
+                (tok.Operand, 'operand', None),
+                (tok.Operator, 'unary operator', None),
+                (tok.Parenthesis, 'opening parenthesis', '('),
             )
             if isinstance(what, tok.Newline):
                 continue
@@ -328,11 +356,52 @@ class ExpressionParser():
                         node.add_child(FalseBranchNode(block=blk))
                         break
                 return node
-            elif isinstance(what, tok.Operand):
+            elif isinstance(what, tok.Operand) \
+                    or isinstance(what, tok.Operator) \
+                    or isinstance(what, tok.Parenthesis):
                 self.unget_tokens(1)
                 return self.read_expression()
 
     def read_expression(self):
+        return self.expression_to_ast(self.read_raw_expression())
+
+    def expand_postfix_unary_operators(self, expr_nodes):
+        result_nodes = []
+        for node in expr_nodes:
+            if isinstance(node, FunctionCallNode):
+                if len(result_nodes) == 0:
+                    raise MandarinSyntaxError(
+                        'Expected a callable object before function call',
+                        posinfo=node.posinnfo
+                    )
+                func = result_nodes[-1]
+                result_nodes.pop()
+                result_nodes.append(AstCallOperatorNode(func=func, args_node=node))
+            else:
+                if isinstance(node, Node):
+                    src_children = node.children
+                    node.children = self.expand_postfix_unary_operators(src_children)
+                result_nodes.append(node)
+        return result_nodes
+
+    def expand_prefix_unary_operators(self, expr_nodes):
+        return expr_nodes
+
+    def expand_binary_operators(self, expr_nodes):
+        return expr_nodes
+    
+    def expression_to_ast(self, expr_node):
+        # Converts list of nodes to AST
+        expr_nodes = expr_node.children
+        expr_nodes = self.expand_postfix_unary_operators(expr_nodes)
+        expr_nodes = self.expand_prefix_unary_operators(expr_nodes)
+        expr_nodes = self.expand_binary_operators(expr_nodes)
+        result_node = ExpressionNode()
+        for i in expr_nodes:
+            result_node.add_child(i, adopt=True)
+        return result_node
+
+    def read_raw_expression(self):
         # This functions just reads an expression and return a list of tokens; it doesn't parse
         # the expression
         # TODO: Stub, just reads tokens until a newline
@@ -383,11 +452,14 @@ class ExpressionParser():
                 # and in the second case it is following an operator OR it is the first token in the
                 # expression
 
+                #__import__('pudb').set_trace()
+
                 # TODO
                 if len(node.children) == 0 or isinstance(node.children[-1], OperatorTokenNode):
                     # Sub-expression
                     node.add_child(self.read_expression())
-                elif isinstance(node.children[-1].data, tok.Operand):
+                #elif isinstance(node.children[-1].data, tok.Operand):
+                else:
                     # Function call
                     node.add_child(self.read_function_call())
                 self.expect((tok.Parenthesis, 'closing parenthesis', ')'))
