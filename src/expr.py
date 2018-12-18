@@ -16,6 +16,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import weakref
+import copy
+
 import src.tokens as tok
 from src.exceptions import MandarinSyntaxError
 
@@ -139,6 +141,12 @@ class OperatorTokenNode(Node):
     def __init__(self, data):
         super().__init__(data=data)
         self.name = 'OperatorTokenNode'
+
+
+class BinaryOperatorTokenNode(Node):
+    def __init__(self, data):
+        super().__init__(data=data)
+        self.name = 'BinaryOperatorTokenNode'
 
 
 class OperandNode(Node):
@@ -415,27 +423,36 @@ class ExpressionParser():
         return result_nodes
 
     def expand_prefix_unary_operators(self, expr_nodes):
+        def is_unary_operator(op):
+            return isinstance(op, OperatorTokenNode) and op.data.val in {'!', '~', '+', '-'}
+        def is_operator(op):
+            return isinstance(op, OperatorTokenNode) or isinstance(op, BinaryOperatorTokenNode)
+
         result_nodes = []
-        for node in reversed(expr_nodes):
-            if isinstance(node, OperatorTokenNode):
-                op = node.data.val
-                possible_operators = {'!', '~', '+', '-'}
-                if op not in possible_operators:
-                    raise MandarinSyntaxError('Invalid unary operator: "{}"'.format(op), posinfo=node.posinfo)
-                if len(result_nodes) == 0:
-                    raise MandarinSyntaxError(
-                        'Expected operand or expression after a unary operator',
-                        posinfo=node.posinfo
-                    )
-                what = result_nodes[-1]
-                result_nodes.pop()
-                result_nodes.append(AstGenericUnaryOperatorNode(operator=op, operand=what))
+        binop_flag = False
+        for node in expr_nodes:
+            if not is_unary_operator(node) and not binop_flag:
+                tmp = copy.deepcopy(node)
+                while len(result_nodes) > 0 and is_unary_operator(result_nodes[-1]):
+                    operator = result_nodes[-1].data.val
+                    result_nodes.pop()
+                    tmp = AstGenericUnaryOperatorNode(operator=operator, operand=tmp)
+                result_nodes.append(tmp)
+                binop_flag = True
             else:
+                binop_flag = False
+                if isinstance(node, OperatorTokenNode) \
+                        and len(result_nodes) > 0 \
+                        and not is_operator(result_nodes[-1]):
+                    new_node = BinaryOperatorTokenNode(node.data)
+                    for i in node.children:
+                        new_node.add_child(i, adopt=True)
+                    node = new_node
                 if isinstance(node, Node):
                     src_children = node.children
                     node.children = self.expand_prefix_unary_operators(src_children)
                 result_nodes.append(node)
-        return list(reversed(result_nodes))
+        return result_nodes
 
     def expand_binary_operators(self, expr_nodes):
         return expr_nodes
