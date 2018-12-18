@@ -1,0 +1,7 @@
+def main()
+    if !!true
+        print(-4 + ~5)
+    elif false
+        print(+6)
+    end
+end

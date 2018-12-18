@@ -226,6 +226,13 @@ class AstCallOperatorNode(AstBinaryOperatorNode):
         self.name = 'AstCallOperatorNode'
 
 
+class AstGenericUnaryOperatorNode(AstUnaryOperatorNode):
+    def __init__(self, operator, operand):
+        super().__init__(op=operand)
+        self.name = 'AstGenericUnaryOperatorNode'
+        self.data = operator
+
+
 def split_list_by(ls, by, allow_empty=True):
     last_index = 0
     for i, v in enumerate(ls):
@@ -395,20 +402,40 @@ class ExpressionParser():
                 if len(result_nodes) == 0:
                     raise MandarinSyntaxError(
                         'Expected a callable object before function call',
-                        posinfo=node.posinnfo
+                        posinfo=node.posinfo
                     )
                 func = result_nodes[-1]
                 result_nodes.pop()
                 result_nodes.append(AstCallOperatorNode(func=func, args_node=node))
             else:
-                if isinstance(node, Node):
+                if isinstance(node, Node) and not isinstance(node, AstCallOperatorNode):
                     src_children = node.children
                     node.children = self.expand_postfix_unary_operators(src_children)
                 result_nodes.append(node)
         return result_nodes
 
     def expand_prefix_unary_operators(self, expr_nodes):
-        return expr_nodes
+        result_nodes = []
+        for node in reversed(expr_nodes):
+            if isinstance(node, OperatorTokenNode):
+                op = node.data.val
+                possible_operators = {'!', '~', '+', '-'}
+                if op not in possible_operators:
+                    raise MandarinSyntaxError('Invalid unary operator: "{}"'.format(op), posinfo=node.posinfo)
+                if len(result_nodes) == 0:
+                    raise MandarinSyntaxError(
+                        'Expected operand or expression after a unary operator',
+                        posinfo=node.posinfo
+                    )
+                what = result_nodes[-1]
+                result_nodes.pop()
+                result_nodes.append(AstGenericUnaryOperatorNode(operator=op, operand=what))
+            else:
+                if isinstance(node, Node):
+                    src_children = node.children
+                    node.children = self.expand_prefix_unary_operators(src_children)
+                result_nodes.append(node)
+        return list(reversed(result_nodes))
 
     def expand_binary_operators(self, expr_nodes):
         return expr_nodes
