@@ -153,6 +153,41 @@ class FunctionCallNode(Node):
         self.name = 'FunctionCallNode'
 
 
+class ConditionNode(Node):
+    def __init__(self):
+        super().__init__(data=None)
+        self.name = 'ConditionNode'
+
+
+class BranchNode(Node):
+    def __init__(self, condition, block):
+        super().__init__(data=None)
+        self.name = 'BranchNode'
+        self.add_child(condition)
+        self.add_child(block)
+
+
+# if CONDITION
+class TrueBranchNode(BranchNode):
+    def __init__(self, condition, block):
+        super().__init__(condition=condition, block=block)
+        self.name = 'TrueBranchNode'
+
+
+# elif CONDITION
+class AlternativeBranchNode(BranchNode):
+    def __init__(self, condition, block):
+        super().__init__(condition=condition, block=block)
+        self.name = 'AlternativeBranchNode'
+
+
+# else
+class FalseBranchNode(BranchNode):
+    def __init__(self, block):
+        super().__init__(condition=Node(data=None), block=block)
+        self.name = 'FalseBranchNode'
+
+
 def split_list_by(ls, by, allow_empty=True):
     last_index = 0
     for i, v in enumerate(ls):
@@ -258,12 +293,41 @@ class ExpressionParser():
             [what] = self.expect(
                 (tok.Newline, 'newline', None),
                 (tok.Keyword, 'keyword', 'end'),
+                (tok.Keyword, 'keyword', 'else'),
+                (tok.Keyword, 'keyword', 'if'),
+                (tok.Keyword, 'keyword', 'elif'),
                 (tok.Operand, 'operand', None)
             )
             if isinstance(what, tok.Newline):
                 continue
             elif isinstance(what, tok.Keyword) and what.val == 'end':
                 return None
+            elif isinstance(what, tok.Keyword) and what.val in {'else', 'elif'}:
+                self.unget_tokens(1)
+                return None
+            elif isinstance(what, tok.Keyword) and what.val == 'if':
+                #import pudb; pudb.set_trace()
+                node = ConditionNode()
+                cond = self.read_expression()
+                blk = self.read_code_block()
+                node.add_child(TrueBranchNode(condition=cond, block=blk))
+                while True:
+                    maybe_else_or_elif = self.expect(
+                        (tok.Keyword, 'keyword', 'else'),
+                        (tok.Keyword, 'keyword', 'elif'),
+                        required=False
+                    )
+                    if maybe_else_or_elif is None:
+                        break
+                    if maybe_else_or_elif[0].val == 'elif':
+                        cond = self.read_expression()
+                        blk = self.read_code_block()
+                        node.add_child(AlternativeBranchNode(condition=cond, block=blk))
+                    else:   # else
+                        blk = self.read_code_block()
+                        node.add_child(FalseBranchNode(block=blk))
+                        break
+                return node
             elif isinstance(what, tok.Operand):
                 self.unget_tokens(1)
                 return self.read_expression()

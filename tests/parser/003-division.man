@@ -1,0 +1,11 @@
+def main()
+    a = Int(input())
+    b = Int(input())
+    if a == 0
+        print('Error: a = 0')
+    elif b == 0
+        print('Error: b = 0')
+    else
+        print(a / b + b / a)
+    end
+end

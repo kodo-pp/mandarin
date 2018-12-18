@@ -38,8 +38,8 @@ def main():
         parser = expr.ExpressionParser(token_list)
         print(parser.parse_expression().dump())
     except MandarinSyntaxError as e:
-        print(fmt.error('Syntax error: ') + str(e))
-        os._exit(1)
+        print(fmt.error('Syntax error: ', fd=sys.stdout) + str(e))
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()

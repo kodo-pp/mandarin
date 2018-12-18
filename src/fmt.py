@@ -15,5 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-def error(text):
-    return '\x1b[1;31m{}\x1b[0m'.format(text)
+import sys
+
+def error(text, fd=False):
+    if fd is False or fd is None or not fd.isatty():
+        return text
+    else:
+        return '\x1b[1;31m{}\x1b[0m'.format(text)
