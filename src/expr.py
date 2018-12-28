@@ -241,6 +241,13 @@ class AstGenericUnaryOperatorNode(AstUnaryOperatorNode):
         self.data = operator
 
 
+class AstGenericBinaryOperatorNode(AstBinaryOperatorNode):
+    def __init__(self, operator, lhs, rhs):
+        super().__init__(lhs=lhs, rhs=rhs)
+        self.name = 'AstGenericBinaryOperatorNode'
+        self.data = operator
+
+
 def split_list_by(ls, by, allow_empty=True):
     last_index = 0
     for i, v in enumerate(ls):
@@ -455,7 +462,81 @@ class ExpressionParser():
         return result_nodes
 
     def expand_binary_operators(self, expr_nodes):
-        return expr_nodes
+        def get_precedence(op):
+            # + - * / % && || < <= == != >= > = += -= *= /= %= >> << >>= <<= & | &= |= ^ ^= . .. ...
+            return {
+                '||':   100,
+                '&&':   200,
+                '->':   300,
+
+                '|':    400,
+                '^':    500,
+                '&':    600,
+
+                '<':    800,
+                '>':    800,
+                '<=':   800,
+                '>=':   800,
+                '==':   800,
+                '!=':   800,
+
+                '>>':   1200,
+                '<<':   1200,
+
+                '+':    1500,
+                '-':    1500,
+                '*':    1800,
+                '/':    1800,
+                '%':    1800,
+
+                '..':   3000,
+                '...':  3000,
+
+                '.':    20000,
+
+                '=':   -30000,
+                '+=':  -30000,
+                '-=':  -30000,
+                '*=':  -30000,
+                '/=':  -30000,
+                '%=':  -30000,
+                '>>=': -30000,
+                '<<=': -30000,
+                '&=':  -30000,
+                '|=':  -30000,
+                '^=':  -30000,
+            }[op.data.val]
+
+        def make_expression_node(children):
+            node = ExpressionNode()
+            for i in children:
+                node.add_child(i, adopt=True)
+            return node
+
+        result_nodes = []
+        for node in expr_nodes:
+            if isinstance(node, ExpressionNode):
+                min_prec_ind = -1
+                min_prec = 9999999999999
+                for i, op in enumerate(node.children):
+                    if not isinstance(op, BinaryOperatorTokenNode):
+                        continue
+                    if min_prec_ind < 0 or get_precedence(op) < min_prec:
+                        min_prec_ind = i
+                        min_prec = get_precedence(op)
+                if min_prec_ind >= 0:
+                    ch = node.children
+                    node = AstGenericBinaryOperatorNode(
+                        operator=ch[min_prec_ind],
+                        lhs=make_expression_node(self.expand_binary_operators(ch[:min_prec_ind])),
+                        rhs=make_expression_node(self.expand_binary_operators(ch[min_prec_ind+1:]))
+                    )
+                    
+            new_node = copy.copy(node)
+            new_node.children = self.expand_binary_operators(node.children)
+            result_nodes.append(new_node)
+                
+        return result_nodes
     
     def expression_to_ast(self, expr_node):
         # Converts list of nodes to AST
