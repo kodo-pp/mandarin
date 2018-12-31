@@ -461,7 +461,7 @@ class ExpressionParser():
                 result_nodes.append(node)
         return result_nodes
 
-    def expand_binary_operators(self, expr_nodes):
+    def expand_binary_operators(self, expr_nodes, shit_may_happen=False):
         def get_precedence(op):
             # + - * / % && || < <= == != >= > = += -= *= /= %= >> << >>= <<= & | &= |= ^ ^= . .. ...
             return {
@@ -513,6 +513,13 @@ class ExpressionParser():
                 node.add_child(i, adopt=True)
             return node
 
+        # Some hack to make this little shit really work
+        if shit_may_happen:
+            tmp = expr_nodes
+            root_node = ExpressionNode()
+            root_node.children = tmp
+            expr_nodes = [root_node]
+
         result_nodes = []
         for node in expr_nodes:
             if isinstance(node, ExpressionNode):
@@ -543,7 +550,8 @@ class ExpressionParser():
         expr_nodes = expr_node.children
         expr_nodes = self.expand_postfix_unary_operators(expr_nodes)
         expr_nodes = self.expand_prefix_unary_operators(expr_nodes)
-        expr_nodes = self.expand_binary_operators(expr_nodes)
+        expr_nodes = self.expand_binary_operators(expr_nodes, shit_may_happen=True)
+        expr_nodes = expr_nodes[0].children
         result_node = ExpressionNode()
         for i in expr_nodes:
             result_node.add_child(i, adopt=True)
