@@ -21,7 +21,7 @@ class MandarinError(RuntimeError):
         self.posinfo = posinfo
 
     def __str__(self):
-        return str(self.text) + ' (line {}, col {})'.format(self.posinfo.line, self.posinfo.col)
+        return str(self.text) + ' ({})'.format(self.posinfo.fmt())
 
 
 class MandarinSyntaxError(MandarinError):

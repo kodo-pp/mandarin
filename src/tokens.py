@@ -206,8 +206,8 @@ def is_token_ignored(token, ignlist):
     return False
 
 
-def tokenize(expr, token_rules, ignored_tokens):
-    pi = Posinfo()
+def tokenize(expr, token_rules, ignored_tokens, filename):
+    pi = Posinfo(filename=filename)
     while len(expr) > 0:
         token, expr, pi = read_token(expr, token_rules, pi)
         if not is_token_ignored(token, ignored_tokens):

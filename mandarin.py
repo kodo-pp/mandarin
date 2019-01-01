@@ -34,7 +34,14 @@ def main():
     with open(sys.argv[1]) as f:
         s = f.read()
     try:
-        token_list = list(tokens.tokenize(s, token_rules.token_rules, token_rules.ignored_tokens))
+        token_list = list(
+            tokens.tokenize(
+                s,
+                token_rules.token_rules,
+                token_rules.ignored_tokens,
+                filename=sys.argv[1]
+            )
+        )
         parser = expr.ExpressionParser(token_list)
         print(parser.parse_expression().dump())
     except MandarinSyntaxError as e:

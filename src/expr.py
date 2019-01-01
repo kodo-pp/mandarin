@@ -20,6 +20,7 @@ import copy
 
 import src.tokens as tok
 from src.exceptions import MandarinSyntaxError
+from src.posinfo import EofPosinfo
 
 class UnexpectedTokenError(MandarinSyntaxError):
     def __init__(self, text, posinfo):
@@ -273,7 +274,10 @@ class ExpressionParser():
     def expect(self, *expected, required=True):
         if self.offset >= len(self.tokens):
             if required:
-                raise UnexpectedTokenError('Unexpected EOF')
+                # If len(self.tokens) == 0, we should never meet an *unexpected* EOF
+                assert len(self.tokens) >= 1
+                filename = self.tokens[-1].posinfo.filename
+                raise UnexpectedTokenError('Unexpected EOF', posinfo=EofPosinfo(filename=filename))
             else:
                 return None
         token = self.tokens[self.offset]
@@ -332,7 +336,7 @@ class ExpressionParser():
                 if kw == 'def':
                     root.add_child(self.read_function_definition())
                 else:
-                    raise UnexpectedTokenError('Unexpected keyword: {}'.format(kw))
+                    raise UnexpectedTokenError('Unexpected keyword: {}'.format(kw), posinfo=token.posinfo)
             elif isinstance(token, tok.Newline):
                 self.offset += 1
                 continue
@@ -378,6 +382,12 @@ class ExpressionParser():
             elif isinstance(what, tok.Keyword) and what.val == 'if':
                 node = ConditionNode()
                 cond = self.read_expression()
+                self.expect((tok.Newline, 'newline', None))
+                if len(cond.children) == 0:
+                    raise MandarinSyntaxError(
+                        'Expected condition in "if" clause',
+                        posinfo=self.tokens[self.offset-1].posinfo
+                    )
                 blk = self.read_code_block()
                 node.add_child(TrueBranchNode(condition=cond, block=blk))
                 while True:
@@ -390,6 +400,12 @@ class ExpressionParser():
                         break
                     if maybe_else_or_elif[0].val == 'elif':
                         cond = self.read_expression()
+                        self.expect((tok.Newline, 'newline', None))
+                        if len(cond.children) == 0:
+                            raise MandarinSyntaxError(
+                                'Expected condition in "elif" clause',
+                                posinfo=self.tokens[self.offset-1].posinfo
+                            )
                         blk = self.read_code_block()
                         node.add_child(AlternativeBranchNode(condition=cond, block=blk))
                     else:   # else
@@ -402,6 +418,7 @@ class ExpressionParser():
                 [var] = self.expect((tok.Identifier, 'loop variable name', None))
                 self.expect((tok.Keyword, 'keyword', 'in'))
                 iter_range = self.read_expression()
+                self.expect((tok.Newline, 'newline', None))
                 blk = self.read_code_block()
                 node.add_child(IdentifierNode(var))
                 node.add_child(iter_range)
@@ -410,6 +427,7 @@ class ExpressionParser():
             elif isinstance(what, tok.Keyword) and what.val == 'while':
                 node = WhileLoopNode()
                 cond = self.read_expression()
+                self.expect((tok.Newline, 'newline', None))
                 blk = self.read_code_block()
                 node.add_child(cond)
                 node.add_child(blk)

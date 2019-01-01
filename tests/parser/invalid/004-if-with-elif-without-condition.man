@@ -1,0 +1,7 @@
+def main()
+    if foo()
+        bar()
+    elif
+        baz()
+    end
+end

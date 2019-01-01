@@ -16,7 +16,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 class Posinfo:
-    def __init__(self, line=1, col=1):
+    def __init__(self, line=1, col=1, filename=None):
+        self.filename = filename
         self.line = line
         self.col = col
 
@@ -32,3 +33,17 @@ class Posinfo:
         col_offset = len(s.split('\n')[-1])
         self.col = col_offset + 1
         self.line += newlines
+
+    def fmt(self):
+        return '{}: line {}, col {}'.format(
+            self.filename if self.filename is not None else '<unknown file>',
+            self.line,
+            self.col
+        )
+
+class EofPosinfo(Posinfo):
+    def __init__(self, filename=None):
+        super().__init__(line=-1, col=-1, filename=filename)
+
+    def fmt(self):
+        return '{}: end of file'.format(self.filename if self.filename is not None else '<unknown file>')
