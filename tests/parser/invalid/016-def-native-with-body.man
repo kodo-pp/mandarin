@@ -1,0 +1,3 @@
+def native main()
+    foo()
+end

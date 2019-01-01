@@ -1,0 +1,6 @@
+def main()
+    foo()
+    else
+        bar()
+    end
+end

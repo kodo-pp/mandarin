@@ -1,0 +1,5 @@
+def main()
+    for i in
+        foo()
+    end
+end
