@@ -179,6 +179,12 @@ class ForLoopNode(Node):
         self.name = 'ForLoopNode'
 
 
+class WhileLoopNode(Node):
+    def __init__(self):
+        super().__init__(data=None)
+        self.name = 'WhileLoopNode'
+
+
 class BranchNode(Node):
     def __init__(self, condition, block):
         super().__init__(data=None)
@@ -357,6 +363,7 @@ class ExpressionParser():
                 (tok.Keyword, 'keyword', 'if'),
                 (tok.Keyword, 'keyword', 'elif'),
                 (tok.Keyword, 'keyword', 'for'),
+                (tok.Keyword, 'keyword', 'while'),
                 (tok.Operand, 'operand', None),
                 (tok.Operator, 'unary operator', None),
                 (tok.Parenthesis, 'opening parenthesis', '('),
@@ -369,7 +376,6 @@ class ExpressionParser():
                 self.unget_tokens(1)
                 return None
             elif isinstance(what, tok.Keyword) and what.val == 'if':
-                #import pudb; pudb.set_trace()
                 node = ConditionNode()
                 cond = self.read_expression()
                 blk = self.read_code_block()
@@ -399,6 +405,13 @@ class ExpressionParser():
                 blk = self.read_code_block()
                 node.add_child(IdentifierNode(var))
                 node.add_child(iter_range)
+                node.add_child(blk)
+                return node
+            elif isinstance(what, tok.Keyword) and what.val == 'while':
+                node = WhileLoopNode()
+                cond = self.read_expression()
+                blk = self.read_code_block()
+                node.add_child(cond)
                 node.add_child(blk)
                 return node
             elif isinstance(what, tok.Operand) \
