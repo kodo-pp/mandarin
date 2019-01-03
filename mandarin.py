@@ -24,6 +24,7 @@ import src.tokens as tokens
 import src.token_rules as token_rules
 import src.expr as expr
 import src.fmt as fmt
+import src.gen as gen
 from src.exceptions import MandarinSyntaxError
 
 
@@ -43,7 +44,10 @@ def main():
             )
         )
         parser = expr.ExpressionParser(token_list)
-        print(parser.parse_expression().dump())
+        ast = parser.parse_expression()
+
+        codegen = gen.CodeGenerator(ast)
+        print(codegen.generate())
     except MandarinSyntaxError as e:
         print(fmt.error('Syntax error: ', fd=sys.stdout) + str(e))
         sys.exit(1)
