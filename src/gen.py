@@ -21,9 +21,10 @@ from src.exceptions import MandarinSyntaxError
 from src.posinfo import EofPosinfo
 
 
-GLOBAL_PROLOGUE = '''#include <mandarin/mandarin.hpp>'''
+GLOBAL_PROLOGUE = '''#include <mandarin/mandarin.hpp>\n'''
 
-GLOBAL_EPILOGUE = '''namespace mandarin::env
+GLOBAL_EPILOGUE = '''
+namespace mandarin::env
 {
     int argc = 0;
     char** argv = nullptr;
@@ -38,6 +39,26 @@ int main(int argc, char** argv)
 '''
 
 
+class Indentator:
+    def __init__(self, indent_str='    '):
+        self.indent_str = indent_str
+        self.level = 0
+
+    def __enter__(self, *args):
+        self.level += 1
+        return self
+
+    def __exit__(self, *args):
+        self.level -= 1
+        return self
+
+    def lvl(self):
+        return self.level
+
+    def str(self):
+        return self.indent_str * self.level
+
+
 class FunctionRedefinitionError(MandarinSyntaxError):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
@@ -47,50 +68,102 @@ def get_function_name(func_node):
     return func_node.data[0]
 
 
+def get_function_args(func_node):
+    # XXX: stub
+    return []
+
+
 class CodeGenerator:
     def __init__(self, ast):
         self.ast = ast
         self.code = ''
+        self.indent = Indentator()
 
     def generate(self):
         self.emit_global_prologue()
-        functions = self.find_functions()
-        func_names = set()
-        for i in functions:
-            self.emit_function(i)
+
+        # Emit all function declarations (with or without body)
+        function_declarations = self.find_function_declarations()
+        for i in function_declarations:
+            self.emit_function_declaration(i)
+
+        self.write_line('')
+
+        # Emit all function definitions (only with body), additionally check for duplicate definitions
+        function_definitions = self.find_function_definitions()
+        func_def_names = set()
+        for i in function_definitions:
+            self.emit_function_definition(i)
             fname = get_function_name(i)
-            if fname in func_names:
+            if fname in func_def_names:
                 raise FunctionRedefinitionError('Function "{}" redifined', posinfo=EofPosinfo())    # TODO: find real posinfo
-            func_names.add(fname)
+            func_def_names.add(fname)
+
         self.emit_global_epilogue()
         return self.code
 
     def emit_global_prologue(self):
-        self.write_line(GLOBAL_PROLOGUE)
+        self.write_line(GLOBAL_PROLOGUE, raw=True)
 
     def emit_global_epilogue(self):
-        self.write_line(GLOBAL_EPILOGUE)
+        self.write_line(GLOBAL_EPILOGUE, raw=True)
 
-    def write_line(self, code):
-        self.write(code + '\n')
+    def write_line(self, code, raw=False):
+        if raw:
+            self.write(code + '\n')
+        else:
+            if '\n' in code:
+                for line in code.split('\n'):
+                    self.write_line(line, raw=raw)
+            else:
+                self.write(self.indent.str() + code + '\n')
 
     def write(self, code):
         self.code += code
 
-    def find_functions(self):
+    def find_function_declarations(self):
         for node in self.ast.children:
             if isinstance(node, expr.FunctionDefinitionNode) \
                     or isinstance(node, expr.NativeFunctionDefinitionNode):
                 yield node
 
-    def emit_function(self, func):
-        self.write_line('// function "{}"'.format(get_function_name(func)))
+    def find_function_definitions(self):
+        for node in self.ast.children:
+            if isinstance(node, expr.FunctionDefinitionNode) \
+                    and not isinstance(node, expr.NativeFunctionDefinitionNode):
+                yield node
 
-    def get_function_names(self):
-        functions = self.find_functions()
+    def emit_function_declaration(self, func):
+        # TODO: type inference
+        func_name = get_function_name(func)
+        args = get_function_args(func)
+        function_decl_header = '{ret_type} mandarin::user::{func_name}({args_str});'.format(
+            ret_type='mandarin::core::Object',
+            func_name=func_name,
+            args_str='/* arguments */',  # XXX: stub
+        )
+        self.write_line(function_decl_header)
+
+    def emit_function_definition(self, func):
+        # TODO: type inference
+        func_name = get_function_name(func)
+        args = get_function_args(func)
+        function_def_header = '{ret_type} mandarin::user::{func_name}({args_str})'.format(
+            ret_type='mandarin::core::Object',
+            func_name=func_name,
+            args_str='/* arguments */',  # XXX: stub
+        )
+        self.write_line(function_def_header)
+        self.write_line('{')
+        with self.indent:
+            self.write_line('// Function body') # XXX: stub
+        self.write_line('}')
+        self.write_line('')
+
+    def get_function_definition_names(self):
+        functions = self.find_function_definitions()
         func_names = set()
         for i in functions:
-            self.emit_function(i)
             fname = get_function_name(i)
             func_names.add(fname)
         return func_names
