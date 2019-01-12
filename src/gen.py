@@ -72,6 +72,10 @@ def get_function_args(func_node):
     return func_node.data[1]
 
 
+def get_function_code(func_node):
+    return func_node.data[2]
+
+
 class CodeGenerator:
     def __init__(self, ast):
         self.ast = ast
@@ -147,7 +151,7 @@ class CodeGenerator:
             elif typename == 'float':
                 type_str = 'double'
             else:
-                type_str = 'const mandarin::user::raii::{}&'.format(typename)
+                type_str = 'const mandarin::core::StaticObject<mandarin::user::{}>&'.format(typename)
             trans.append('{} {}'.format(type_str, varname))
         return ', '.join(trans)
 
@@ -156,7 +160,7 @@ class CodeGenerator:
         func_name = get_function_name(func)
         args = get_function_args(func)
         function_decl_header = '{ret_type} mandarin::user::{func_name}({args_str});'.format(
-            ret_type='mandarin::core::raii::Object',
+            ret_type='mandarin::core::Object',
             func_name=func_name,
             args_str=self.args_to_str(args),
         )
@@ -174,9 +178,26 @@ class CodeGenerator:
         self.write_line(function_def_header)
         self.write_line('{')
         with self.indent:
-            self.write_line('// Function body') # XXX: stub
+            code = get_function_code(func)
+            self.emit_code_block(code)
+            #self.write_line('// Function body') # XXX: stub
         self.write_line('}')
         self.write_line('')
+
+    def emit_code_block(self, code):
+        for st in code.children:
+            s = self.statement(st)
+            self.write_line('{};'.format(s))
+
+    def statement(self, st):
+        if isinstance(st, expr.ExpressionNode):
+            return self.expression(st)
+        else:
+            # XXX: stub
+            return '/* statement */'
+    
+    def expression(self, expr):
+        return '/* expression */'
 
     def get_function_definition_names(self):
         functions = self.find_function_definitions()
