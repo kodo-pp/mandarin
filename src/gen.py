@@ -69,8 +69,7 @@ def get_function_name(func_node):
 
 
 def get_function_args(func_node):
-    # XXX: stub
-    return []
+    return func_node.data[1]
 
 
 class CodeGenerator:
@@ -133,14 +132,33 @@ class CodeGenerator:
                     and not isinstance(node, expr.NativeFunctionDefinitionNode):
                 yield node
 
+    def args_to_str(self, args):
+        trans = []
+        for i in args:
+            typenode, varname = i.data
+            if not isinstance(typenode, expr.PrimitiveTypeNode):
+                # XXX: stub
+                raise MandarinSyntaxError('STUB: expected primitive type node', posinfo=typenode.posinfo)
+            typename = typenode.data
+            if typename == 'var':
+                type_str = 'const mandarin::core::Object&'
+            elif typename == 'int':
+                type_str = 'long'
+            elif typename == 'float':
+                type_str = 'double'
+            else:
+                type_str = 'const mandarin::user::raii::{}&'.format(typename)
+            trans.append('{} {}'.format(type_str, varname))
+        return ', '.join(trans)
+
     def emit_function_declaration(self, func):
         # TODO: type inference
         func_name = get_function_name(func)
         args = get_function_args(func)
         function_decl_header = '{ret_type} mandarin::user::{func_name}({args_str});'.format(
-            ret_type='mandarin::core::Object',
+            ret_type='mandarin::core::raii::Object',
             func_name=func_name,
-            args_str='/* arguments */',  # XXX: stub
+            args_str=self.args_to_str(args),
         )
         self.write_line(function_decl_header)
 
@@ -151,7 +169,7 @@ class CodeGenerator:
         function_def_header = '{ret_type} mandarin::user::{func_name}({args_str})'.format(
             ret_type='mandarin::core::Object',
             func_name=func_name,
-            args_str='/* arguments */',  # XXX: stub
+            args_str=self.args_to_str(args),
         )
         self.write_line(function_def_header)
         self.write_line('{')
