@@ -17,6 +17,7 @@
 
 
 import src.expr as expr
+import src.tokens as tok
 from src.exceptions import MandarinSyntaxError
 from src.posinfo import EofPosinfo
 
@@ -50,7 +51,6 @@ class Indentator:
 
     def __exit__(self, *args):
         self.level -= 1
-        return self
 
     def lvl(self):
         return self.level
@@ -196,8 +196,88 @@ class CodeGenerator:
             # XXX: stub
             return '/* statement */'
     
-    def expression(self, expr):
-        return '/* expression */'
+    def unescape(self, s):
+        yield '"'
+        i = 0
+        while i < len(s):
+            if s[i] == '\\':
+                assert i + 1 < len(s)
+                ctl = s[i+1]
+                if ctl in 'rn0bvt':
+                    yield '\\' + ctl + '" "'
+                    i += 2
+                    continue
+                elif ctl == 'x':
+                    if i + 3 >= len(s):
+                        raise MandarinSyntaxError('Invalid escape sequence', posinfo=EofPosinfo())
+                    hexcode = s[i+2:i+4]
+                    for c in hexcode:
+                        if c not in '0123456789abcdefABCDEF':
+                            raise MandarinSyntaxError('Invalid escape sequence', posinfo=EofPosinfo())
+                    yield '\\x' + hexcode.lower() + '" "'
+                    i += 4
+                    continue
+                elif ctl == 'u':
+                    if i + 5 >= len(s):
+                        raise MandarinSyntaxError('Invalid escape sequence', posinfo=EofPosinfo())
+                    hexcode = s[i+2:i+6]
+                    for c in hexcode:
+                        if c not in '0123456789abcdefABCDEF':
+                            raise MandarinSyntaxError('Invalid escape sequence', posinfo=EofPosinfo())
+                    yield '\\u' + hexcode.lower() + '" "'
+                    i += 6
+                    continue
+                elif ctl == 'U':
+                    if i + 9 >= len(s):
+                        raise MandarinSyntaxError('Invalid escape sequence', posinfo=EofPosinfo())
+                    hexcode = s[i+2:i+10]
+                    for c in hexcode:
+                        if c not in '0123456789abcdefABCDEF':
+                            raise MandarinSyntaxError('Invalid escape sequence', posinfo=EofPosinfo())
+                    yield '\\U' + hexcode.lower() + '" "'
+                    i += 10
+                    continue
+                elif ctl == '"':
+                    yield '\\"'
+                    i += 2
+                    continue
+                elif ctl == "'":
+                    yield "'"
+                    i += 2
+                    continue
+                else:
+                    raise MandarinSyntaxError('Invalid escape sequence', posinfo=EofPosinfo())
+            else:
+                yield s[i]
+                i += 1
+        yield '"'
+
+    def string(self, s):
+        if s[0] != s[-1] or s[0] not in {'"', "'"}:
+            raise MandarinSyntaxError('String syntax error', posinfo=EofPosinfo())
+        z = s[1:-1]
+        return ''.join(self.unescape(z))
+
+    def expression(self, ex):
+        if type(ex) is expr.ExpressionNode:
+            print(ex.dump())
+            return '(' + self.expression(ex.children[0]) + ')'
+        elif type(ex) is expr.AstCallOperatorNode:
+            function = self.expression(ex.children[0])
+            args = self.expression(ex.children[1])
+            return function + args
+        elif type(ex) is expr.OperandNode:
+            return self.expression(ex.data)
+        elif type(ex) is tok.Identifier:    # TODO: local/global scope
+            return ex.val                   # STUB
+        elif type(ex) is expr.FunctionCallNode:
+            return '({})'.format(', '.join(map(self.expression, ex.children)))
+        elif type(ex) is tok.String:
+            return self.string(ex.val)
+        elif type(ex) is tok.DecimalInteger:
+            return ex.val
+        else:
+            return '/* expression of type: {}, repr: {} */'.format(type(ex), repr(ex))
 
     def get_function_definition_names(self):
         functions = self.find_function_definitions()

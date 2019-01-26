@@ -1,0 +1,3 @@
+def main()
+    print('Hel\x1blo\U12bE90Ce\r\n\01\" wor\u134982ld!\n\'', 2 * (2 + 2))
+end
