@@ -579,11 +579,9 @@ class ExpressionParser():
                         lhs=make_expression_node(self.expand_binary_operators(ch[:min_prec_ind])),
                         rhs=make_expression_node(self.expand_binary_operators(ch[min_prec_ind+1:]))
                     )
-                    
-            new_node = copy.copy(node)
-            new_node.children = self.expand_binary_operators(node.children)
-            result_nodes.append(new_node)
-                
+            else: 
+                node.children = self.expand_binary_operators(node.children)
+            result_nodes.append(node)
         return result_nodes
     
     def expression_to_ast(self, expr_node):
@@ -591,12 +589,9 @@ class ExpressionParser():
         expr_nodes = expr_node.children
         expr_nodes = self.expand_postfix_unary_operators(expr_nodes)
         expr_nodes = self.expand_prefix_unary_operators(expr_nodes)
+
         expr_nodes = self.expand_binary_operators(expr_nodes, shit_may_happen=True)
-        expr_nodes = expr_nodes[0].children
-        result_node = ExpressionNode()
-        for i in expr_nodes:
-            result_node.add_child(i, adopt=True)
-        return result_node
+        return expr_nodes[0]
 
     def read_raw_expression(self):
         # This functions just reads an expression and return a list of tokens; it doesn't parse
@@ -650,13 +645,10 @@ class ExpressionParser():
                 # and in the second case it is following an operator OR it is the first token in the
                 # expression
 
-                #__import__('pudb').set_trace()
-
                 # TODO
                 if len(node.children) == 0 or isinstance(node.children[-1], OperatorTokenNode):
                     # Sub-expression
                     node.add_child(self.read_expression())
-                #elif isinstance(node.children[-1].data, tok.Operand):
                 else:
                     # Function call
                     node.add_child(self.read_function_call())

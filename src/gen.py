@@ -260,7 +260,6 @@ class CodeGenerator:
 
     def expression(self, ex):
         if type(ex) is expr.ExpressionNode:
-            print(ex.dump())
             return '(' + self.expression(ex.children[0]) + ')'
         elif type(ex) is expr.AstCallOperatorNode:
             function = self.expression(ex.children[0])

@@ -46,6 +46,8 @@ def main():
         parser = expr.ExpressionParser(token_list)
         ast = parser.parse_expression()
 
+        print(ast.dump())
+
         codegen = gen.CodeGenerator(ast)
         print(codegen.generate())
     except MandarinSyntaxError as e:
