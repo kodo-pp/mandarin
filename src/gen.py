@@ -258,6 +258,45 @@ class CodeGenerator:
         z = s[1:-1]
         return ''.join(self.unescape(z))
 
+    def bin_operator(self, ex):
+        op = ex.data.data.val
+        if self.have_cxx_op(op):
+            return '{} {} {}'.format(
+                self.expression(ex.children[0]),
+                self.get_cxx_op(op),
+                self.expression(ex.children[1]),
+            )
+        else:
+            return '{}({}, {})'.format(
+                self.get_emulated_cxx_op(op),
+                self.expression(ex.children[0]),
+                self.expression(ex.children[1]),
+            )
+
+    def get_cxx_op(self, op):
+        if op in '+ - * & | ^ && || << >> = <<= >>= += -= *= == < > <= >= != ! ~ &= |= ^='.split():
+            return op
+        else:
+            raise KeyError(op)
+
+    def have_cxx_op(self, op):
+        try:
+            self.get_cxx_op(op)
+            return True
+        except KeyError:
+            return False
+
+    def get_emulated_cxx_op(self, op):
+        return {
+            '/': 'mandarin::rt::divide',
+            '%': 'mandarin::rt::modulo',
+            '->': 'mandarin::rt::implies',
+            '/=': 'mandarin::rt::divide_assign',
+            '%=': 'mandarin::rt::modulo_assign',
+            '..': 'mandarin::rt::half_range',
+            '...': 'mandarin::rt::inclusive_range',
+        }[op]
+
     def expression(self, ex):
         if type(ex) is expr.ExpressionNode:
             return '(' + self.expression(ex.children[0]) + ')'
@@ -275,6 +314,8 @@ class CodeGenerator:
             return self.string(ex.val)
         elif type(ex) is tok.DecimalInteger:
             return ex.val
+        elif type(ex) is expr.AstGenericBinaryOperatorNode:
+            return self.bin_operator(ex)
         else:
             return '/* expression of type: {}, repr: {} */'.format(type(ex), repr(ex))
 
