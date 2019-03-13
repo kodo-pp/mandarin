@@ -105,6 +105,7 @@ num_float:
         | INT_DEC 'e' SIGN? INT_DEC
     );
 
+/*
 string:                         
     QUOTE_SINGLE string_char_single* QUOTE_SINGLE
     | QUOTE_DOUBLE string_char_double QUOTE_DOUBLE;
@@ -120,14 +121,17 @@ string_char_double:
     | '\\\\' 
     | '\\"' 
     | STRING_ESCAPE_CHAR;
+*/
+string:
+    STRING_SINGLE;
 
 unary_operator:                 
     '!' 
     | '-' 
     | '~';
 
-g__binop_500: atomic_expression '+' atomic_expression | atomic_expression '-' atomic_expression;
-g__binop_1000: g__binop_500 '*' g__binop_500 | g__binop_500 '/' g__binop_500;
+g__binop_500: atomic_expression ('+' atomic_expression)* | atomic_expression ('-' atomic_expression)*;
+g__binop_1000: g__binop_500 ('*' g__binop_500)* | g__binop_500 ('/' g__binop_500)*;
 g__operator_toplevel: g__binop_1000;
 
 
@@ -172,7 +176,10 @@ STRING_ESCAPE_CHAR:     '\\n'
                       | '\\u' HEXCHAR HEXCHAR HEXCHAR HEXCHAR
                       | '\\U' HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR;
 
-WHITESPACE:         [ \t]+ -> skip;
+STRING_SINGLE: '\'' (STRING_SIMPLE_CHAR_SINGLE | STRING_ESCAPE_CHAR)* '\'';
 
-STRING_SIMPLE_CHAR_SINGLE:     ~('\\' | '\n' | '\r' | '\'');
-STRING_SIMPLE_CHAR_DOUBLE:     ~('\\' | '\n' | '\r' | '"');
+fragment STRING_SIMPLE_CHAR_SINGLE:     ~('\\' | '\n' | '\r' | '\'');
+fragment STRING_SIMPLE_CHAR_DOUBLE:     ~('\\' | '\n' | '\r' | '"');
+
+
+WHITESPACE:         [ \t]+ -> skip;

@@ -78,12 +78,6 @@ expression:
 
 call_operator:
     '(' (NL* expression NL* (',' NL* expression NL*)* ','?)? ')';
-/*
-
-call_operator:
-    '(' INT_DEC ')';
-*/
-
 
 atomic_expression:  
     '(' expression ')'
@@ -105,21 +99,9 @@ num_float:
         | INT_DEC 'e' SIGN? INT_DEC
     );
 
-string:                         
-    QUOTE_SINGLE string_char_single* QUOTE_SINGLE
-    | QUOTE_DOUBLE string_char_double QUOTE_DOUBLE;
-
-string_char_single:             
-    STRING_SIMPLE_CHAR_SINGLE
-    | '\\\\'
-    | '\\\''
-    | STRING_ESCAPE_CHAR;
-
-string_char_double: 
-    STRING_SIMPLE_CHAR_DOUBLE 
-    | '\\\\' 
-    | '\\"' 
-    | STRING_ESCAPE_CHAR;
+// TODO: This is just a stub (I finally made it work!!! Yay!!!)
+string:
+    STRING_SINGLE;
 
 unary_operator:                 
     '!' 
@@ -162,7 +144,10 @@ STRING_ESCAPE_CHAR:     '\\n'
                       | '\\u' HEXCHAR HEXCHAR HEXCHAR HEXCHAR
                       | '\\U' HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR;
 
-WHITESPACE:         [ \t]+ -> skip;
+STRING_SINGLE: '\'' (STRING_SIMPLE_CHAR_SINGLE | STRING_ESCAPE_CHAR)* '\'';
 
-STRING_SIMPLE_CHAR_SINGLE:     ~('\\' | '\n' | '\r' | '\'');
-STRING_SIMPLE_CHAR_DOUBLE:     ~('\\' | '\n' | '\r' | '"');
+fragment STRING_SIMPLE_CHAR_SINGLE:     ~('\\' | '\n' | '\r' | '\'');
+fragment STRING_SIMPLE_CHAR_DOUBLE:     ~('\\' | '\n' | '\r' | '"');
+
+
+WHITESPACE:         [ \t]+ -> skip;

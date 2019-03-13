@@ -62,7 +62,7 @@ def main():
         current_operators = []
         for v in vs:
             current_operators.append(
-                '{lp} {op} {lp}'.format(
+                '{lp} ({op} {lp})*'.format(
                     lp = 'g__binop_{}'.format(less_priority[k])
                         if less_priority[k] is not None
                         else 'atomic_expression',
