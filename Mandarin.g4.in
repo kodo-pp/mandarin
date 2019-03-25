@@ -59,35 +59,39 @@ var_assignment:
 if_statement:
     KW_IF expression NL (code_block_elif)* code_block_else? code_block;
 
-while_statement:                
+while_statement:
     KW_WHILE expression NL code_block;
 
-for_statement:                  
+for_statement:
     KW_FOR IDENTIFIER KW_IN expression NL code_block;
 
-expression:                     
-    atomic_expression call_operator
-    | atomic_expression
+expression:
+    front_atomic_expression
     | g__operator_toplevel
     | unary_operator atomic_expression;
 
 call_operator:
     '(' (NL* expression NL* (',' NL* expression NL*)* ','?)? ')';
 
-atomic_expression:  
-    '(' expression ')'
+atomic_expression:
+    atomic_expression call_operator
+    | IDENTIFIER
+    | '(' expression ')'
     | literal;
 
-literal:        
+front_atomic_expression:
+    atomic_expression
+    | unary_operator front_atomic_expression;
+
+literal:
     num_integer
     | num_float
-    | IDENTIFIER
     | string;
 
-num_integer:                    
+num_integer:
     SIGN? (INT_DEC | INT_BIN | INT_OCT | INT_HEX);
 
-num_float:                      
+num_float:
     SIGN? (
         INT_DEC? '.' INT_DEC ('e' SIGN? INT_DEC)?
         | INT_DEC '.' INT_DEC? ('e' SIGN? INT_DEC)?
@@ -96,11 +100,13 @@ num_float:
 
 // TODO: This is just a stub (I finally made it work!!! Yay!!!)
 string:
-    STRING_SINGLE;
+    STRING_SINGLE
+    | STRING_DOUBLE;
 
-unary_operator:                 
-    '!' 
-    | '-' 
+unary_operator:
+    '!'
+    | '+'
+    | '-'
     | '~';
 
 // @@_operators_@@
@@ -140,6 +146,7 @@ STRING_ESCAPE_CHAR:     '\\n'
                       | '\\U' HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR HEXCHAR;
 
 STRING_SINGLE: '\'' (STRING_SIMPLE_CHAR_SINGLE | STRING_ESCAPE_CHAR)* '\'';
+STRING_DOUBLE: '\'' (STRING_SIMPLE_CHAR_DOUBLE | STRING_ESCAPE_CHAR)* '"';
 
 fragment STRING_SIMPLE_CHAR_SINGLE:     ~('\\' | '\n' | '\r' | '\'');
 fragment STRING_SIMPLE_CHAR_DOUBLE:     ~('\\' | '\n' | '\r' | '"');

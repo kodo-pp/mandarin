@@ -69,7 +69,7 @@ def main():
                 '{gp} ({op} {gp})*'.format(
                     gp = 'g__binop_{}'.format(safe_str(greater_priority[k]))
                         if greater_priority[k] is not None
-                        else 'atomic_expression',
+                        else 'front_atomic_expression',
                     op = repr(v['operator'])
                 )
             )
