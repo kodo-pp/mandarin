@@ -34,7 +34,13 @@ function_definition:
     KW_DEF IDENTIFIER '(' typed_arglist? ')' NL code_block;
 
 code_block:
-    (code_statement? NL+)+ KW_END NL;
+    (code_statement? NL+)* KW_END NL?;
+
+code_block_elif:
+    (code_statement? NL+)* KW_ELIF expression NL;
+
+code_block_else:
+    (code_statement? NL+)* KW_ELSE NL;
 
 code_statement:
     expression
@@ -51,18 +57,7 @@ var_assignment:
     expression '=' expression;
 
 if_statement:
-    KW_IF expression NL if_code_block;
-
-if_code_block:                  
-    (code_statement | NL) NL+ if_code_block_continuation NL;
-
-if_finalizing_code_block:       
-    (code_statement | NL) NL+ KW_END NL;
-
-if_code_block_continuation:     
-    KW_END
-    | KW_ELIF expression NL if_finalizing_code_block
-    | KW_ELSE NL if_code_block;
+    KW_IF expression NL (code_block_elif)* code_block_else? code_block;
 
 while_statement:                
     KW_WHILE expression NL code_block;
@@ -149,5 +144,7 @@ STRING_SINGLE: '\'' (STRING_SIMPLE_CHAR_SINGLE | STRING_ESCAPE_CHAR)* '\'';
 fragment STRING_SIMPLE_CHAR_SINGLE:     ~('\\' | '\n' | '\r' | '\'');
 fragment STRING_SIMPLE_CHAR_DOUBLE:     ~('\\' | '\n' | '\r' | '"');
 
+
+COMMENT:            '#' ~('\n')* -> skip;
 
 WHITESPACE:         [ \t]+ -> skip;

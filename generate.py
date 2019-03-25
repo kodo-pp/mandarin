@@ -10,6 +10,10 @@ class GenerationError(Exception):
     pass
 
 
+def safe_str(x):
+    return str(x).replace('-', 'minus_').replace('.', '_point_')
+
+
 def main():
     print('== Generating Mandarin.g4')
 
@@ -46,32 +50,32 @@ def main():
     except IndexError as e:
         raise GenerationError('Invalid gen/operators.txt format')
     
-    key_func = lambda op: op['priority']
+    key_func = lambda op: -op['priority']
     operators.sort(key=key_func)
-    operator_groups = [(k, list(vs)) for k, vs in itertools.groupby(operators, key=key_func)]
+    operator_groups = [(-k, list(vs)) for k, vs in itertools.groupby(operators, key=key_func)]
 
-    less_priority = {}
+    greater_priority = {}
     operator_rules = []
     
     prev_k = None
     for k, vs in operator_groups:
-        less_priority[k] = prev_k
+        greater_priority[k] = prev_k
         prev_k = k
 
     for k, vs in operator_groups:
         current_operators = []
         for v in vs:
             current_operators.append(
-                '{lp} ({op} {lp})*'.format(
-                    lp = 'g__binop_{}'.format(less_priority[k])
-                        if less_priority[k] is not None
+                '{gp} ({op} {gp})*'.format(
+                    gp = 'g__binop_{}'.format(safe_str(greater_priority[k]))
+                        if greater_priority[k] is not None
                         else 'atomic_expression',
                     op = repr(v['operator'])
                 )
             )
         current_operators_str = ' | '.join(current_operators)
-        operator_rules.append('{}: {};'.format('g__binop_{}'.format(k), current_operators_str))
-    operator_rules.append('g__operator_toplevel: g__binop_{};'.format(prev_k))
+        operator_rules.append('{}: {};'.format('g__binop_{}'.format(safe_str(k)), current_operators_str))
+    operator_rules.append('g__operator_toplevel: g__binop_{};'.format(safe_str(prev_k)))
     operator_rules_str = '\n'.join(operator_rules)
     
     print('  -- [5/6] Writing Mandarin.g4')
