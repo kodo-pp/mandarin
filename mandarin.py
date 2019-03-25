@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Mandarin compiler
 # Copyright (C) 2018  Alexander Korzun
 #
@@ -16,37 +15,35 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import readline
 import sys
 import os
 
-import src.tokens as tokens
-import src.token_rules as token_rules
-import src.expr as expr
-import src.fmt as fmt
-from src.exceptions import MandarinSyntaxError
+import antlr4
 
+import src.ast
+import src.pretty
+from antlr_out.MandarinLexer import MandarinLexer
+from antlr_out.MandarinParser import MandarinParser
 
 def main():
     if len(sys.argv) != 2:
         print('Usage: mandarin <file>')
-        os._exit(1)
-    with open(sys.argv[1]) as f:
-        s = f.read()
-    try:
-        token_list = list(
-            tokens.tokenize(
-                s,
-                token_rules.token_rules,
-                token_rules.ignored_tokens,
-                filename=sys.argv[1]
-            )
-        )
-        parser = expr.ExpressionParser(token_list)
-        print(parser.parse_expression().dump())
-    except MandarinSyntaxError as e:
-        print(fmt.error('Syntax error: ', fd=sys.stdout) + str(e))
         sys.exit(1)
+
+    source_filename = sys.argv[1]
+    source_stream   = antlr4.FileStream(source_filename)
+    lexer           = MandarinLexer(source_stream)
+    token_stream    = antlr4.CommonTokenStream(lexer)
+    parser          = MandarinParser(token_stream)
+    antlr_tree      = parser.code()
+    ast_generator   = src.ast.AstGenerator()
+    tree_walker     = antlr4.ParseTreeWalker()
+    tree_walker.walk(ast_generator, antlr_tree)
+    ast             = ast_generator.get_ast()
+    ast_printer     = src.pretty.TreePrinter()
+    ast_printer.print(ast)
+
+
 
 if __name__ == '__main__':
     main()

@@ -4,6 +4,7 @@ import os
 import sys
 import re
 import itertools
+import subprocess as sp
 
 
 class GenerationError(Exception):
@@ -86,7 +87,13 @@ def main():
     with open('Mandarin.g4', 'w') as f:
         f.write(data)
 
-    print('  -- [6/6] Done')
+    print('  -- [6/7] Running ANTLR')
+    try:
+        sp.run(['antlr4', 'Mandarin.g4', '-Dlanguage=Python3', '-o', 'antlr_out'], check=True)
+    except (OSError, sp.CalledProcessError) as e:
+        raise GenerationError('Antlr execution failed: {}'.format(str(e))) from e
+
+    print('  -- [7/7] Done')
 
 if __name__ == '__main__':
     try:
