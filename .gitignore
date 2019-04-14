@@ -4,6 +4,6 @@ __pycache__
 *.tmp
 *.o
 *.so
-Mandarin.g4
+Mandarin.lark
 out
-antlr_out
+venv
