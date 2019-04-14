@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Mandarin compiler
-# Copyright (C) 2018  Alexander Korzun
+# Copyright (C) 2019  Alexander Korzun
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,12 +18,9 @@
 import sys
 import os
 
-import antlr4
+from lark import Lark
 
-import src.ast
-import src.pretty
-from antlr_out.MandarinLexer import MandarinLexer
-from antlr_out.MandarinParser import MandarinParser
+from . import grammar
 
 def main():
     if len(sys.argv) != 2:
@@ -31,18 +28,12 @@ def main():
         sys.exit(1)
 
     source_filename = sys.argv[1]
-    source_stream   = antlr4.FileStream(source_filename)
-    lexer           = MandarinLexer(source_stream)
-    token_stream    = antlr4.CommonTokenStream(lexer)
-    parser          = MandarinParser(token_stream)
-    antlr_tree      = parser.code()
-    ast_generator   = src.ast.AstGenerator()
-    tree_walker     = antlr4.ParseTreeWalker()
-    tree_walker.walk(ast_generator, antlr_tree)
-    ast             = ast_generator.get_ast()
-    ast_printer     = src.pretty.TreePrinter()
-    ast_printer.print(ast)
+    with open(source_filename) as f:
+        code = f.read()
 
+    parser = Lark(grammar.GRAMMAR, start='code')
+    ast = parser.parse(code)
+    print(ast.pretty())
 
 
 if __name__ == '__main__':
