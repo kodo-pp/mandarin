@@ -18,23 +18,34 @@
 import sys
 import os
 
-from lark import Lark
-
 from . import grammar
 
-def main():
-    if len(sys.argv) != 2:
-        print('Usage: mandarin <file>')
-        sys.exit(1)
+
+def run_parser(code):
+    # Imports are inside the function because of their performance impact (it takes lark about 0.07 s to import
+    # on my pc, effectively making the whole compiler startup time about 0.14 s, which is quite much)
+    # However, if imported locally, this import time won't affect the overall startup time as
+    # this function may not even get executed (e.g. when '--help' flag is used)
+    from lark import Lark
+    from . import postparser
 
     source_filename = sys.argv[1]
     with open(source_filename) as f:
         code = f.read()
 
     parser = Lark(grammar.GRAMMAR, start='code')
-    ast = parser.parse(code)
-    print(ast.pretty())
+    pre_ast = parser.parse(code)
+    
+    post_parser = postparser.PostParser()
+    ast = post_parser.post_parse(pre_ast)
 
+
+def main():
+    if len(sys.argv) != 2:
+        print('Usage: mandarin <file>')
+        sys.exit(1)
+
+    print(ast.pretty())
 
 if __name__ == '__main__':
     main()
