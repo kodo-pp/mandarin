@@ -1,4 +1,4 @@
-# This file is auto-generated. Do not edit it as your changes will be overwritten.
+# This file (grammar.py, NOT grammar.py.in) is auto-generated. Do not edit it as your changes will be overwritten.
 # Edit Mandarin.lark.in instead
 
 GRAMMAR = "@@_grammar_@@"
