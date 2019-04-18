@@ -18,8 +18,6 @@
 import sys
 import os
 
-from . import grammar
-
 
 def run_parser(code):
     # Imports are inside the function because of their performance impact (it takes lark about 0.07 s to import
@@ -28,16 +26,13 @@ def run_parser(code):
     # this function may not even get executed (e.g. when '--help' flag is used)
     from lark import Lark
     from . import postparser
-
-    source_filename = sys.argv[1]
-    with open(source_filename) as f:
-        code = f.read()
+    from . import grammar
 
     parser = Lark(grammar.GRAMMAR, start='code')
     pre_ast = parser.parse(code)
     
     post_parser = postparser.PostParser()
-    ast = post_parser.post_parse(pre_ast)
+    return post_parser.post_parse(pre_ast)
 
 
 def main():
@@ -45,6 +40,11 @@ def main():
         print('Usage: mandarin <file>')
         sys.exit(1)
 
+    source_filename = sys.argv[1]
+    with open(source_filename) as f:
+        code = f.read()
+
+    ast = run_parser(code)
     print(ast.pretty())
 
 if __name__ == '__main__':

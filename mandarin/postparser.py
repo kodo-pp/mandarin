@@ -20,12 +20,12 @@ import copy
 
 import lark
 
-from . import operators
+from .operators import OPERATORS
 
 
 class BinaryOperatorNode(lark.tree.Tree):
     def __init__(self, lhs, rhs, operator, **kwargs):
-        super.__init__(data='binary_operator', children=[lhs, rhs, operator], **kwargs)
+        super().__init__(data='binary_operator', children=[lhs, rhs, operator], **kwargs)
 
 
 class PostParser(object):
@@ -40,9 +40,12 @@ class PostParser(object):
             # Entirely strip newlines as we don't need them anymore
             if ast.type == 'NL':
                 return None
+            else:
+                return ast
         elif isinstance(ast, lark.tree.Tree):
             if self.is_expression(ast):
-                return self.walk_expression(ast.children)
+                ast.children = self.walk_expression(ast.children)
+                return ast
             else:
                 ast.children = list(filter(lambda x: x is not None, (self.walk(node) for node in ast.children)))
                 return ast
@@ -50,25 +53,27 @@ class PostParser(object):
             raise ValueError('Unknown tree node type: {}'.format(type(ast)))
 
     def walk_expression(self, children):
+        print([x.pretty() for x in children])
         children = [self.walk(node) for node in children]
         rawlhs, rawrhs, op = self.binop_partition(children)
         if rawlhs is None or rawrhs is None or op is None:
-            pass
-            # Stopped here (TODO)
-        lhs = self.walk_expression(rawlhs)
-        rhs = self.walk_expression(rawrhs)
-        return BinaryOperatorNode(lhs=lhs, rhs=rhs, operator=op)
+            return children
+        lhs = self.walk_expression(rawlhs)[0]
+        rhs = self.walk_expression(rawrhs)[0]
+        return [BinaryOperatorNode(lhs=lhs, rhs=rhs, operator=op)]
     
     def binop_partition(self, children):
         operators = [
-            (i, node)
-            for i, node in enumerate(children)
+            node
+            for node in children
             if isinstance(node, lark.lexer.Token) and node.type == 'BINOP'
         ]
-        if len(operators) == 0:
+
+        enum_operators = list(enumerate(operators))
+        if len(enum_operators) == 0:
             return None, None, None
-        i, node = min(operators, key = lambda i_node: operators.OPERATORS[i_node[1].value].priority)
+        i, node = min(enum_operators, key = lambda i_node: OPERATORS[i_node[1].value].priority)
         return operators[:i], operators[i+1:], operators[i]
 
     def is_expression(self, ast):
-        return ast.data in {'expression', 'atomic_expression', 'front_atomic_expression'}
+        return ast.data == 'expression'
