@@ -28,11 +28,12 @@ def run_parser(code):
     from . import postparser
     from . import grammar
 
-    parser = Lark(grammar.GRAMMAR, start='code')
+    parser = Lark(grammar.GRAMMAR, start='code', parser='lalr')
     pre_ast = parser.parse(code)
     
-    post_parser = postparser.PostParser()
-    return post_parser.post_parse(pre_ast)
+    #post_parser = postparser.PostParser()
+    #return post_parser.post_parse(pre_ast)
+    return pre_ast
 
 
 def main():
@@ -46,6 +47,7 @@ def main():
 
     ast = run_parser(code)
     print(ast.pretty())
+
 
 if __name__ == '__main__':
     main()

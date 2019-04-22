@@ -30,8 +30,11 @@ class BinaryOperatorNode(lark.tree.Tree):
 
 class PostParser(object):
     def post_parse(self, pre_ast):
-        ast = copy.deepcopy(pre_ast)
-        return self.walk(ast)
+        #ast = copy.deepcopy(pre_ast)    # <--- PROBLEM WITH UNSTABLE PARSE TREE PINPOINTED!!!
+        #ast = pre_ast
+        return pre_ast
+        # F*ck the input immutability
+        #return self.walk(pre_ast)
 
     def walk(self, ast):
         if isinstance(ast, BinaryOperatorNode):
@@ -43,23 +46,19 @@ class PostParser(object):
             else:
                 return ast
         elif isinstance(ast, lark.tree.Tree):
+            ast.children = [i for i in (self.walk(node) for node in ast.children) if i is not None]
             if self.is_expression(ast):
-                ast.children = self.walk_expression(ast.children)
-                return ast
-            else:
-                ast.children = list(filter(lambda x: x is not None, (self.walk(node) for node in ast.children)))
-                return ast
+                expr_node = self.make_expression_tree(ast.children)
+                return expr_node
+            return ast
         else:
             raise ValueError('Unknown tree node type: {}'.format(type(ast)))
 
-    def walk_expression(self, children):
-        print([x.pretty() for x in children])
-        children = [self.walk(node) for node in children]
-        rawlhs, rawrhs, op = self.binop_partition(children)
-        if rawlhs is None or rawrhs is None or op is None:
-            return children
-        lhs = self.walk_expression(rawlhs)[0]
-        rhs = self.walk_expression(rawrhs)[0]
+    def make_expression_tree(self, nodes):
+        print('make_expression_tree({})'.format(nodes))
+        if len(nodes) == 1:
+            return nodes[0]
+        lhs, rhs, op = self.binop_partition(nodes)
         return [BinaryOperatorNode(lhs=lhs, rhs=rhs, operator=op)]
     
     def binop_partition(self, children):
