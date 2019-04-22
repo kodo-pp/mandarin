@@ -72,7 +72,7 @@ atomic_expression: atomic_expression call_operator
     | literal
 
 front_atomic_expression: atomic_expression
-    | unary_operator front_atomic_expression
+    | unary_operator+ front_atomic_expression
 
 literal: num_integer
     | num_float
