@@ -18,8 +18,8 @@ def safe_str(x):
 def main():
     print('== Generating grammar.py')
 
-    print('  -- [0/9] Reading Mandarin.lark.in')
-    with open('Mandarin.lark.in') as f:
+    print('  -- [0/9] Reading Mandarin.lark')
+    with open('Mandarin.lark') as f:
         in_data = f.read()
 
     print('  -- [1/9] Reading gen/keywords.txt')
