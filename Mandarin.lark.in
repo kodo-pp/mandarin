@@ -17,13 +17,13 @@
 
 code: toplevel_statement*
 
-?toplevel_statement: (function_definition | native_function_declaration) NL
+?toplevel_statement: (function_definition | native_function_declaration)? NL
 
-native_function_declaration: KW_DEF KW_NATIVE IDENTIFIER "(" typed_arglist ")" NL
+native_function_declaration: KW_DEF KW_NATIVE IDENTIFIER "(" typed_arglist ")"
 
 function_definition: KW_DEF IDENTIFIER "(" typed_arglist ")" NL code_block_end
 
-typed_arglist: (typename IDENTIFIER ("," typename IDENTIFIER)* ","?)?
+typed_arglist: (typename? IDENTIFIER ("," typename? IDENTIFIER)* ","?)?
 
 typename: IDENTIFIER
 
@@ -47,7 +47,7 @@ front_atomic_expression: atomic_expression
 
 atomic_expression: literal | IDENTIFIER | "(" expression ")" | atomic_expression call_operator
 
-literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
+?literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
 
 call_operator: "(" (expression ("," expression)*)? ")"
 
@@ -94,3 +94,6 @@ NL: "\r\n" | "\n"
 
 WS: /[ \t]+/
 %ignore WS
+
+COMMENT: /[#][^\n]*/
+%ignore COMMENT
