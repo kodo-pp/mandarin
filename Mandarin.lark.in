@@ -27,22 +27,37 @@ typed_arglist: (typename IDENTIFIER ("," typename IDENTIFIER)* ","?)?
 
 typename: IDENTIFIER
 
+if_statement: KW_IF expression NL (code_block_elif expression NL)* (code_block_else NL)? code_block_end
+
 code_block_end: code_statement* KW_END
 
-code_statement: expression NL
+code_block_elif: code_statement* KW_ELIF
+
+code_block_else: code_statement* KW_ELSE
+
+code_statement: (expression | var_declaration | var_assignment | if_statement) NL
+
+var_declaration: typename IDENTIFIER (ASSIGNMENT_OP expression)?
+
+var_assignment: expression ASSIGNMENT_OP expression
 
 expression: front_atomic_expression (BINOP front_atomic_expression)*
 
 front_atomic_expression: atomic_expression
 
-atomic_expression: literal | IDENTIFIER | "(" expression ")"
+atomic_expression: literal | IDENTIFIER | "(" expression ")" | atomic_expression call_operator
 
 literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
+
+call_operator: "(" (expression ("," expression)*)? ")"
 
 
 KW_DEF: "def"
 KW_NATIVE: "native"
 KW_END: "end"
+KW_IF: "if"
+KW_ELIF: "elif"
+KW_ELSE: "else"
 NUMBER: /[0-9]+/
 STRING_SINGLE:      /'([^'\\]|\\.)*'/
 STRING_DOUBLE:      /"([^"\\]|\\.)*"/
@@ -66,13 +81,14 @@ BINOP: "*"
     | "&&"
     | "||"
     | "++"
+
+ASSIGNMENT_OP: "="
     | "+="
     | "-="
     | "*="
     | "/="
     | "//="
     | "%="
-    | "="
 
 NL: "\r\n" | "\n"
 
