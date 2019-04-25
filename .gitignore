@@ -4,6 +4,5 @@ __pycache__
 *.tmp
 *.o
 *.so
-Mandarin.lark
 out
 venv

@@ -1,0 +1,99 @@
+// vim: set syntax=lark: 
+// Mandarin compiler
+// Copyright (C) 2019  Alexander Korzun
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+code: toplevel_statement*
+
+?toplevel_statement: (function_definition | native_function_declaration)? NL
+
+native_function_declaration: KW_DEF KW_NATIVE IDENTIFIER "(" typed_arglist ")"
+
+function_definition: KW_DEF IDENTIFIER "(" typed_arglist ")" NL code_block_end
+
+typed_arglist: (typename? IDENTIFIER ("," typename? IDENTIFIER)* ","?)?
+
+typename: IDENTIFIER
+
+if_statement: KW_IF expression NL (code_block_elif expression NL)* (code_block_else NL)? code_block_end
+
+code_block_end: code_statement* KW_END
+
+code_block_elif: code_statement* KW_ELIF
+
+code_block_else: code_statement* KW_ELSE
+
+code_statement: (expression | var_declaration | var_assignment | if_statement) NL
+
+var_declaration: typename IDENTIFIER (ASSIGNMENT_OP expression)?
+
+var_assignment: expression ASSIGNMENT_OP expression
+
+expression: front_atomic_expression (BINOP front_atomic_expression)*
+
+front_atomic_expression: atomic_expression
+
+atomic_expression: literal | IDENTIFIER | "(" expression ")" | atomic_expression call_operator
+
+?literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
+
+call_operator: "(" (expression ("," expression)*)? ")"
+
+
+KW_DEF: "def"
+KW_NATIVE: "native"
+KW_END: "end"
+KW_IF: "if"
+KW_ELIF: "elif"
+KW_ELSE: "else"
+NUMBER: /[0-9]+/
+STRING_SINGLE:      /'([^'\\]|\\.)*'/
+STRING_DOUBLE:      /"([^"\\]|\\.)*"/
+
+IDENTIFIER: /[a-zA-Z_][a-zA-Z0-9_]*/
+
+BINOP: "*"
+    | "/"
+    | "%"
+    | "//"
+    | "+"
+    | "-"
+    | "..."
+    | ".."
+    | "=="
+    | "<="
+    | ">="
+    | "!="
+    | "<"
+    | ">"
+    | "&&"
+    | "||"
+    | "++"
+
+ASSIGNMENT_OP: "="
+    | "+="
+    | "-="
+    | "*="
+    | "/="
+    | "//="
+    | "%="
+
+NL: "\r\n" | "\n"
+
+WS: /[ \t]+/
+%ignore WS
+
+COMMENT: /[#][^\n]*/
+%ignore COMMENT
