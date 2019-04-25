@@ -15,58 +15,85 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+
 code: toplevel_statement*
 
-?toplevel_statement: (function_definition | native_function_declaration)? NL
+?toplevel_statement: (function_definition | native_function_declaration)? _NL
+
+
+// Function
 
 native_function_declaration: KW_DEF KW_NATIVE IDENTIFIER "(" typed_arglist ")"
 
-function_definition: KW_DEF IDENTIFIER "(" typed_arglist ")" NL code_block_end
+function_definition: KW_DEF IDENTIFIER "(" typed_arglist ")" _NL code_block_end
 
 typed_arglist: (typename? IDENTIFIER ("," typename? IDENTIFIER)* ","?)?
 
-typename: IDENTIFIER
-
-if_statement: KW_IF expression NL (code_block_elif expression NL)* (code_block_else NL)? code_block_end
-
-for_statement: KW_FOR IDENTIFIER KW_IN expression NL code_block_end
-
 code_block_end: code_statement* KW_END
 
-code_block_elif: code_statement* KW_ELIF
+code_statement: (expression
+    | var_declaration
+    | var_assignment
+    | if_statement
+    | for_statement
+    | while_statement) _NL
 
-code_block_else: code_statement* KW_ELSE
 
-code_statement: (expression | var_declaration | var_assignment | if_statement | for_statement) NL
+// Variable
 
 var_declaration: typename IDENTIFIER (STRICT_ASSIGNMENT_OP expression)?
 
 var_assignment: expression ASSIGNMENT_OP expression
 
+typename: IDENTIFIER
+
+
+// If statement
+
+if_statement: KW_IF expression _NL (code_block_elif expression _NL)* (code_block_else _NL)? code_block_end
+
+code_block_elif: code_statement* KW_ELIF
+
+code_block_else: code_statement* KW_ELSE
+
+
+// For statement
+
+for_statement: KW_FOR IDENTIFIER KW_IN expression _NL code_block_end
+
+
+// While statement
+
+while_statement: KW_WHILE expression _NL code_block_end
+
+
+// Expression
+
 expression: front_atomic_expression (BINOP front_atomic_expression)*
 
-front_atomic_expression: atomic_expression
+?front_atomic_expression: UNOP* atomic_expression
 
-atomic_expression: literal | IDENTIFIER | "(" expression ")" | atomic_expression call_operator
+?atomic_expression: literal | IDENTIFIER | "(" expression ")" | atomic_expression call_operator
 
 ?literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
 
 call_operator: "(" (expression ("," expression)*)? ")"
 
 
-KW_DEF: "def"
+KW_DEF:    "def"
+KW_ELIF:   "elif"
+KW_ELSE:   "else"
+KW_END:    "end"
+KW_FOR:    "for"
+KW_IF:     "if"
+KW_IN:     "in"
 KW_NATIVE: "native"
-KW_END: "end"
-KW_IF: "if"
-KW_ELIF: "elif"
-KW_ELSE: "else"
-KW_FOR: "for"
-KW_IN: "in"
-NUMBER: /[0-9]+/
-STRING_SINGLE:      /'([^'\\]|\\.)*'/
-STRING_DOUBLE:      /"([^"\\]|\\.)*"/
+KW_WHILE:  "while"
 
-IDENTIFIER: /[a-zA-Z_][a-zA-Z0-9_]*/
+IDENTIFIER:    /[a-zA-Z_][a-zA-Z0-9_]*/
+NUMBER:        /[0-9]+/
+STRING_DOUBLE: /"([^"\\]|\\.)*"/
+STRING_SINGLE: /'([^'\\]|\\.)*'/
 
 ASSIGNMENT_OP.2: STRICT_ASSIGNMENT_OP
     | "+="
@@ -75,6 +102,8 @@ ASSIGNMENT_OP.2: STRICT_ASSIGNMENT_OP
     | "/="
     | "//="
     | "%="
+
+STRICT_ASSIGNMENT_OP: "="
 
 BINOP: "*"
     | "/"
@@ -94,9 +123,12 @@ BINOP: "*"
     | "||"
     | "++"
 
-STRICT_ASSIGNMENT_OP: "="
+UNOP: "-"
+    | "+"
+    | "!"
+    | "~"
 
-NL: "\r\n" | "\n"
+_NL: "\r\n" | "\n"
 
 WS: /[ \t]+/
 %ignore WS
