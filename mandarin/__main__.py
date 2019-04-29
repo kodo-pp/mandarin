@@ -27,8 +27,10 @@ def run_parser(code):
     from lark import Lark
     from . import postparser
     from . import grammar
+    from .reliable_lexer import MandarinLexer, AmbiguousMandarinLexer
 
-    parser = Lark(grammar.GRAMMAR, start='code', parser='lalr')
+    parser = Lark(grammar.GRAMMAR, start='code', parser='lalr', lexer=MandarinLexer)
+    print(list(parser.lex(code)))
     pre_ast = parser.parse(code)
     
     #post_parser = postparser.PostParser()

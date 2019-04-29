@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Mandarin compiler
 # Copyright (C) 2019  Alexander Korzun
 #

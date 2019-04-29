@@ -90,12 +90,12 @@ KW_IN:     "in"
 KW_NATIVE: "native"
 KW_WHILE:  "while"
 
-IDENTIFIER:    /[a-zA-Z_][a-zA-Z0-9_]*/
+IDENTIFIER.0:    /[a-zA-Z_][a-zA-Z0-9_]*/
 NUMBER:        /[0-9]+/
 STRING_DOUBLE: /"([^"\\]|\\.)*"/
 STRING_SINGLE: /'([^'\\]|\\.)*'/
 
-ASSIGNMENT_OP.2: STRICT_ASSIGNMENT_OP
+ASSIGNMENT_OP: STRICT_ASSIGNMENT_OP
     | "+="
     | "-="
     | "*="
