@@ -41,9 +41,9 @@ code_statement: (expression
 
 // Variable
 
-var_declaration: typename IDENTIFIER (STRICT_ASSIGNMENT_OP expression)?
+var_declaration: typename IDENTIFIER (strict_assignment_op expression)?
 
-var_assignment: expression ASSIGNMENT_OP expression
+var_assignment: atomic_expression assignment_op expression
 
 typename: IDENTIFIER
 
@@ -69,9 +69,9 @@ while_statement: KW_WHILE expression _NL code_block_end
 
 // Expression
 
-expression: front_atomic_expression (BINOP front_atomic_expression)*
+expression: front_atomic_expression (binop front_atomic_expression)*
 
-?front_atomic_expression: UNOP* atomic_expression
+?front_atomic_expression: unop* atomic_expression
 
 ?atomic_expression: literal | IDENTIFIER | "(" expression ")" | atomic_expression call_operator
 
@@ -80,53 +80,70 @@ expression: front_atomic_expression (BINOP front_atomic_expression)*
 call_operator: "(" (expression ("," expression)*)? ")"
 
 
-KW_DEF:    "def"
-KW_ELIF:   "elif"
-KW_ELSE:   "else"
-KW_END:    "end"
-KW_FOR:    "for"
-KW_IF:     "if"
-KW_IN:     "in"
-KW_NATIVE: "native"
-KW_WHILE:  "while"
+KW_DEF:    /\bdef\b/
+KW_ELIF:   /\belif\b/
+KW_ELSE:   /\belse\b/
+KW_END:    /\bend\b/
+KW_FOR:    /\bfor\b/
+KW_IF:     /\bif\b/
+KW_IN:     /\bin\b/
+KW_NATIVE: /\bnative\b/
+KW_WHILE:  /\bwhile\b/
 
-IDENTIFIER:    /[a-zA-Z_][a-zA-Z0-9_]*/
+// I'm sorry about this piece of sh*t
+// See https://stackoverflow.com/a/2108017 for a piece of clarification of the hell happening here
+IDENTIFIER:    /\b(?!(def|if|elif|else|end|for|while|in|while|native)\b|[^a-zA-Z0-9_])[a-zA-Z_][a-zA-Z0-9_]*/
+
 NUMBER:        /[0-9]+/
 STRING_DOUBLE: /"([^"\\]|\\.)*"/
 STRING_SINGLE: /'([^'\\]|\\.)*'/
 
-ASSIGNMENT_OP: STRICT_ASSIGNMENT_OP
-    | "+="
-    | "-="
-    | "*="
-    | "/="
-    | "//="
-    | "%="
+assignment_op: strict_assignment_op
+    | C_PLUS C_EQUAL
+    | C_MINUS C_EQUAL
+    | C_STAR C_EQUAL
+    | C_SLASH C_EQUAL
+    | C_SLASH C_SLASH C_EQUAL
+    | C_PERCENT C_EQUAL
 
-STRICT_ASSIGNMENT_OP: "="
+strict_assignment_op: C_EQUAL
 
-BINOP: "*"
-    | "/"
-    | "%"
-    | "//"
-    | "+"
-    | "-"
-    | "..."
-    | ".."
-    | "=="
-    | "<="
-    | ">="
-    | "!="
-    | "<"
-    | ">"
-    | "&&"
-    | "||"
-    | "++"
+binop: C_STAR
+    | C_SLASH
+    | C_PERCENT
+    | C_SLASH C_SLASH
+    | C_PLUS
+    | C_MINUS
+    | C_DOT C_DOT C_DOT
+    | C_DOT C_DOT
+    | C_EQUAL C_EQUAL
+    | C_LESS C_EQUAL
+    | C_GREATER C_EQUAL
+    | C_BANG C_EQUAL
+    | C_LESS
+    | C_GREATER
+    | C_AMP C_AMP
+    | C_PIPE C_PIPE
+    | C_PLUS C_PLUS
 
-UNOP: "-"
-    | "+"
-    | "!"
-    | "~"
+unop: C_MINUS
+    | C_PLUS
+    | C_BANG
+    | C_TILDE
+
+C_PLUS: "+"
+C_MINUS: "-"
+C_STAR: "*"
+C_SLASH: "/"
+C_EQUAL: "="
+C_LESS: "<"
+C_GREATER: ">"
+C_AMP: "&"
+C_PIPE: "|"
+C_DOT: "."
+C_PERCENT: "%"
+C_BANG: "!"
+C_TILDE: "~"
 
 _NL: "\r\n" | "\n"
 
