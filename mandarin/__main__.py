@@ -29,12 +29,10 @@ def run_parser(code):
     from . import grammar
 
     parser = Lark(grammar.GRAMMAR, start='code', parser='lalr', lexer='contextual')
-    #print(list(parser.lex(code)))
     pre_ast = parser.parse(code)
     
-    #post_parser = postparser.PostParser()
-    #return post_parser.post_parse(pre_ast)
-    return pre_ast
+    post_parser = postparser.PostParser()
+    return post_parser.post_parse(pre_ast)
 
 
 def main():
