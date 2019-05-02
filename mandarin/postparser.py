@@ -25,57 +25,51 @@ from .operators import OPERATORS
 
 class BinaryOperatorNode(lark.tree.Tree):
     def __init__(self, lhs, rhs, operator, **kwargs):
-        super().__init__(data='binary_operator_node', children=[lhs, rhs, operator], **kwargs)
+        super().__init__(data='binary_operator_node', children=[operator, lhs, rhs], **kwargs)
+        self.lhs = lhs
+        self.rhs = rhs
+        self.op = operator
 
 
-class PostParser(object):
-    def post_parse(self, pre_ast):
-        return self.walk(pre_ast)
+def make_op(terminals):
+    return ''.join([t.value for t in terminals])
 
-    def walk(self, ast):
-        if isinstance(ast, BinaryOperatorNode):
-            raise ValueError('Pre-AST already contains post-parser nodes')
-        elif isinstance(ast, lark.lexer.Token):
-            return ast
-        elif isinstance(ast, lark.tree.Tree):
-            ast.children = [i for i in (self.walk(node) for node in ast.children) if i is not None]
-            if self.is_expression(ast):
-                expr_node = self.make_expression_tree(ast.children)
-                return expr_node
-            return ast
-        else:
-            raise ValueError('Unknown tree node type: {}'.format(type(ast)))
+def binop(x):
+    lhs = x[0]
+    rhs = x[-1]
+    op = make_op(x[1:-1])
+    op_line = x[1].line
+    op_column = x[1].column
+    node = BinaryOperatorNode(lhs=lhs, rhs=rhs, operator=op)
+    node.meta.line = op_line
+    node.meta.column = op_column
+    return node
 
-    def make_expression_tree(self, nodes):
-        print('make_expression_tree:')
-        pprint.pprint(nodes)
-        if len(nodes) == 1:
-            print(1)
-            return nodes[0]
-        lhs, rhs, op = self.binop_partition(nodes)
-        print(2)
-        return BinaryOperatorNode(lhs=lhs, rhs=rhs, operator=op)
-    
-    def binop_partition(self, children):
-        operators = [
-            node
-            for node in children
-            if self.is_binop(node)
-        ]
+class PostParser(lark.visitors.Transformer):
+    @staticmethod
+    def g__binop_1000(x):
+        return binop(x)
 
-        enum_operators = list(enumerate(operators))
-        if len(enum_operators) == 0:
-            #return None, None, None
-            raise ValueError()
-        i, node = min(enum_operators, key = lambda i_node: OPERATORS[self.get_binop(i_node[1])].priority)
-        return operators[:i], operators[i+1:], operators[i]
+    @staticmethod
+    def g__binop_500(x):
+        return binop(x)
 
-    def is_expression(self, ast):
-        return ast.data == 'expression'
-    
-    def is_binop(self, ast):
-        return isinstance(ast, lark.tree.Tree) and ast.data == 'binop'
-    
-    def get_binop(self, ast):
-        assert self.is_binop(ast)
-        return ''.join((i.value for i in ast.children))
+    @staticmethod
+    def g__binop_200(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_100(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_30(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_20(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_minus_1000(x):
+        return binop(x)

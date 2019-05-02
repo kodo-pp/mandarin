@@ -69,7 +69,7 @@ while_statement: KW_WHILE expression _NL code_block_end
 
 // Expression
 
-expression: front_atomic_expression (binop front_atomic_expression)*
+expression: g__binop_toplevel
 
 ?front_atomic_expression: unop* atomic_expression
 
@@ -144,6 +144,8 @@ C_DOT: "."
 C_PERCENT: "%"
 C_BANG: "!"
 C_TILDE: "~"
+
+// @@_operators_@@
 
 _NL: "\r\n" | "\n"
 

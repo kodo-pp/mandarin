@@ -14,6 +14,28 @@ class GenerationError(Exception):
 def safe_str(x):
     return str(x).replace('-', 'minus_').replace('.', '_point_')
 
+def make_op(s):
+    result = []
+    mapping = {
+        '+': 'C_PLUS',
+        '-': 'C_MINUS',
+        '*': 'C_STAR',
+        '/': 'C_SLASH',
+        '%': 'C_PERCENT',
+        '!': 'C_BANG',
+        '~': 'C_TILDE',
+        '=': 'C_EQUAL',
+        '<': 'C_LESS',
+        '>': 'C_GREATER',
+        '.': 'C_DOT',
+        '&': 'C_AMP',
+        '|': 'C_PIPE',
+    }
+    for c in s:
+        assert c in mapping
+        result.append(mapping[c])
+    return ' '.join(result)
+
 
 def main():
     print('== Generating grammar.py')
@@ -40,6 +62,34 @@ def main():
         for op in operator_lines
     ))
 
+    key_func = lambda op: -op['priority']
+    operators = sorted([{'operator': op[1], 'priority': int(op[0])} for op in operator_lines], key=key_func)
+    operator_groups = [(-k, list(vs)) for k, vs in itertools.groupby(operators, key=key_func)]
+
+    greater_priority = {}
+    operator_rules = []
+
+    prev_k = None
+    for k, vs in operator_groups:
+        greater_priority[k] = prev_k
+        prev_k = k
+
+    for k, vs in operator_groups:
+        current_operators = []
+        for v in vs:
+            current_operators.append(
+                '{gp} ({op} {gp})*'.format(
+                    gp = 'g__binop_{}'.format(safe_str(greater_priority[k]))
+                        if greater_priority[k] is not None
+                        else 'front_atomic_expression',
+                    op = make_op(v['operator'])
+                )
+            )
+        current_operators_str = ' | '.join(current_operators)
+        operator_rules.append('?{}: {}'.format('g__binop_{}'.format(safe_str(k)), current_operators_str))
+    operator_rules.append('?g__binop_toplevel: g__binop_{}'.format(safe_str(prev_k)))
+    operator_rules_str = '\n'.join(operator_rules)
+
     with open('mandarin/operators.py', 'w') as f:
         f.write(operators_template.replace('# @@_operators_@@', operators_dict))
 
@@ -48,7 +98,7 @@ def main():
         grammar_template = f.read()
     
     print('  -- [6/7] Writing grammar.py')
-    grammar = in_data
+    grammar = in_data.replace('// @@_operators_@@', operator_rules_str)
 
     with open('mandarin/grammar.py', 'w') as f:
         f.write(grammar_template.replace('"@@_grammar_@@"', repr(grammar)))
