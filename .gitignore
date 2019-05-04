@@ -1,6 +1,10 @@
 __pycache__
+.eggs
+*.egg-info
 *.pyc
 *.pyd
 *.tmp
 *.o
 *.so
+out
+venv

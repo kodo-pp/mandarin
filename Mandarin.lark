@@ -1,0 +1,158 @@
+// vim: set syntax=lark: 
+// Mandarin compiler
+// Copyright (C) 2019  Alexander Korzun
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
+code: toplevel_statement*
+
+?toplevel_statement: (function_definition | native_function_declaration)? _NL
+
+
+// Function
+
+native_function_declaration: KW_DEF KW_NATIVE IDENTIFIER "(" typed_arglist ")"
+
+function_definition: KW_DEF IDENTIFIER "(" typed_arglist ")" _NL code_block_end
+
+typed_arglist: (typed_arg ("," typed_arg)* ","?)?
+
+typed_arg: typename? IDENTIFIER
+
+code_block_end: code_statement* KW_END
+
+code_statement: (expression
+    | var_declaration
+    | var_assignment
+    | if_statement
+    | for_statement
+    | while_statement) _NL
+
+
+// Variable
+
+var_declaration: typename IDENTIFIER (strict_assignment_op expression)?
+
+var_assignment: atomic_expression assignment_op expression
+
+typename: IDENTIFIER
+
+
+// If statement
+
+if_statement: KW_IF expression _NL (code_block_elif expression _NL)* (code_block_else _NL)? code_block_end
+
+code_block_elif: code_statement* KW_ELIF
+
+code_block_else: code_statement* KW_ELSE
+
+
+// For statement
+
+for_statement: KW_FOR IDENTIFIER KW_IN expression _NL code_block_end
+
+
+// While statement
+
+while_statement: KW_WHILE expression _NL code_block_end
+
+
+// Expression
+
+expression: g__binop_toplevel
+
+?front_atomic_expression: unop* atomic_expression
+
+?atomic_expression: literal | IDENTIFIER | "(" expression ")" | atomic_expression call_operator
+
+?literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
+
+call_operator: "(" (expression ("," expression)*)? ")"
+
+
+KW_DEF:    /\bdef\b/
+KW_ELIF:   /\belif\b/
+KW_ELSE:   /\belse\b/
+KW_END:    /\bend\b/
+KW_FOR:    /\bfor\b/
+KW_IF:     /\bif\b/
+KW_IN:     /\bin\b/
+KW_NATIVE: /\bnative\b/
+KW_WHILE:  /\bwhile\b/
+
+// I'm sorry about this piece of sh*t
+// See https://stackoverflow.com/a/2108017 for a piece of clarification of the hell happening here
+IDENTIFIER:    /\b(?!(def|if|elif|else|end|for|while|in|while|native)\b|[^a-zA-Z0-9_])[a-zA-Z_][a-zA-Z0-9_]*/
+
+NUMBER:        /[0-9]+/
+STRING_DOUBLE: /"([^"\\]|\\.)*"/
+STRING_SINGLE: /'([^'\\]|\\.)*'/
+
+assignment_op: strict_assignment_op
+    | C_PLUS C_EQUAL
+    | C_MINUS C_EQUAL
+    | C_STAR C_EQUAL
+    | C_SLASH C_EQUAL
+    | C_SLASH C_SLASH C_EQUAL
+    | C_PERCENT C_EQUAL
+
+strict_assignment_op: C_EQUAL
+
+binop: C_STAR
+    | C_SLASH
+    | C_PERCENT
+    | C_SLASH C_SLASH
+    | C_PLUS
+    | C_MINUS
+    | C_DOT C_DOT C_DOT
+    | C_DOT C_DOT
+    | C_EQUAL C_EQUAL
+    | C_LESS C_EQUAL
+    | C_GREATER C_EQUAL
+    | C_BANG C_EQUAL
+    | C_LESS
+    | C_GREATER
+    | C_AMP C_AMP
+    | C_PIPE C_PIPE
+    | C_PLUS C_PLUS
+
+unop: C_MINUS
+    | C_PLUS
+    | C_BANG
+    | C_TILDE
+
+C_PLUS: "+"
+C_MINUS: "-"
+C_STAR: "*"
+C_SLASH: "/"
+C_EQUAL: "="
+C_LESS: "<"
+C_GREATER: ">"
+C_AMP: "&"
+C_PIPE: "|"
+C_DOT: "."
+C_PERCENT: "%"
+C_BANG: "!"
+C_TILDE: "~"
+
+// @@_operators_@@
+
+_NL: "\r\n" | "\n"
+
+WS: /[ \t]+/
+%ignore WS
+
+COMMENT: /[#][^\n]*/
+%ignore COMMENT

@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 # Mandarin compiler
-# Copyright (C) 2018  Alexander Korzun
+# Copyright (C) 2019  Alexander Korzun
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,10 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import sys
 
-def error(text, fd=False):
-    if fd is False or fd is None or not fd.isatty():
-        return text
-    else:
-        return '\x1b[1;31m{}\x1b[0m'.format(text)
+from setuptools import setup
+
+
+setup(
+    name            = 'mandarin',
+    version         = '1.0.0alpha',
+    description     = 'A mixedly-typed compiled programming language',
+    author          = 'Alexander Korzun',
+    author_email    = 'korzun.sas@mail.ru',
+    license         = 'GPL',
+    packages        = ['mandarin'],
+    tests_require   = ['pytest'],
+    setup_requires  = ['pytest-runner'],
+)

@@ -1,0 +1,15 @@
+# This file (operators.py, NOT operators.py.in) is auto-generated.ArithmeticError
+# Do not edit it as your changes will be overwritten.
+# Edit gen/operators.txt instead
+
+class Operator(object):
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def __getattr__(self, attr):
+        return self.kwargs[attr]
+
+OPERATORS = {
+# @@_operators_@@
+}
+# vim: set syntax=python:

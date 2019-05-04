@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Mandarin compiler
-# Copyright (C) 2018  Alexander Korzun
+# Copyright (C) 2019  Alexander Korzun
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,37 +15,48 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import readline
-import sys
 import os
+import pprint
+import sys
 
-import src.tokens as tokens
-import src.token_rules as token_rules
-import src.expr as expr
-import src.fmt as fmt
-from src.exceptions import MandarinSyntaxError
+from . import postparser
+from . import grammar
+from . import analyzer
+
+from lark import Lark
+
+
+def run_parser(code):
+    parser = Lark(
+        grammar.GRAMMAR,
+        start = 'code',
+        parser = 'lalr',
+        lexer = 'contextual',
+        transformer = postparser.PostParser
+    )
+    ast = parser.parse(code)
+    
+    return ast
 
 
 def main():
     if len(sys.argv) != 2:
         print('Usage: mandarin <file>')
-        os._exit(1)
-    with open(sys.argv[1]) as f:
-        s = f.read()
-    try:
-        token_list = list(
-            tokens.tokenize(
-                s,
-                token_rules.token_rules,
-                token_rules.ignored_tokens,
-                filename=sys.argv[1]
-            )
-        )
-        parser = expr.ExpressionParser(token_list)
-        print(parser.parse_expression().dump())
-    except MandarinSyntaxError as e:
-        print(fmt.error('Syntax error: ', fd=sys.stdout) + str(e))
         sys.exit(1)
+
+    source_filename = sys.argv[1]
+    with open(source_filename) as f:
+        code = f.read()
+
+    ast = run_parser(code)
+    #print(ast.pretty())
+    an = analyzer.Analyzer(ast)
+    print('-- FUNCTION DECLARATIONS --')
+    pprint.pprint(list(an.get_function_declarations()))
+    print()
+    print('-- FUNCTION DEFINITIONS --')
+    pprint.pprint(list(an.get_function_definitions()))
+
 
 if __name__ == '__main__':
     main()
