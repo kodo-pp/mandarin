@@ -418,11 +418,6 @@ class ExpressionParser():
                 [var] = self.expect((tok.Identifier, 'loop variable name', None))
                 self.expect((tok.Keyword, 'keyword', 'in'))
                 iter_range = self.read_expression()
-                if len(iter_range.children) == 0:
-                    raise MandarinSyntaxError(
-                        'Expected iterable object in "for" clause',
-                        posinfo=self.tokens[self.offset-1].posinfo
-                    )
                 self.expect((tok.Newline, 'newline', None))
                 blk = self.read_code_block()
                 node.add_child(IdentifierNode(var))
@@ -432,11 +427,6 @@ class ExpressionParser():
             elif isinstance(what, tok.Keyword) and what.val == 'while':
                 node = WhileLoopNode()
                 cond = self.read_expression()
-                if len(cond.children) == 0:
-                    raise MandarinSyntaxError(
-                        'Expected condition in "while" clause',
-                        posinfo=self.tokens[self.offset-1].posinfo
-                    )
                 self.expect((tok.Newline, 'newline', None))
                 blk = self.read_code_block()
                 node.add_child(cond)
@@ -618,7 +608,6 @@ class ExpressionParser():
         while True:
             # (1) Check if we should stop reading
             if isinstance(token, tok.Newline):
-                self.unget_tokens(1)
                 break
 
             # (2) Depending on which token we have read, expect the next one to be of specific type
