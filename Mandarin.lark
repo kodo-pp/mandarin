@@ -27,7 +27,9 @@ native_function_declaration: KW_DEF KW_NATIVE IDENTIFIER "(" typed_arglist ")"
 
 function_definition: KW_DEF IDENTIFIER "(" typed_arglist ")" _NL code_block_end
 
-typed_arglist: (typename? IDENTIFIER ("," typename? IDENTIFIER)* ","?)?
+typed_arglist: (typed_arg ("," typed_arg)* ","?)?
+
+typed_arg: typename? IDENTIFIER
 
 code_block_end: code_statement* KW_END
 

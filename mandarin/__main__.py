@@ -15,19 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import sys
 import os
+import pprint
+import sys
+
+from . import postparser
+from . import grammar
+from . import analyzer
+
+from lark import Lark
 
 
 def run_parser(code):
-    # Imports are inside the function because of their performance impact (it takes lark about 0.07 s to import
-    # on my pc, effectively making the whole compiler startup time about 0.14 s, which is quite much)
-    # However, if imported locally, this import time won't affect the overall startup time as
-    # this function may not even get executed (e.g. when '--help' flag is used)
-    from lark import Lark
-    from . import postparser
-    from . import grammar
-
     parser = Lark(
         grammar.GRAMMAR,
         start = 'code',
@@ -50,7 +49,13 @@ def main():
         code = f.read()
 
     ast = run_parser(code)
-    print(ast.pretty())
+    #print(ast.pretty())
+    an = analyzer.Analyzer(ast)
+    print('-- FUNCTION DECLARATIONS --')
+    pprint.pprint(list(an.get_function_declarations()))
+    print()
+    print('-- FUNCTION DEFINITIONS --')
+    pprint.pprint(list(an.get_function_definitions()))
 
 
 if __name__ == '__main__':
