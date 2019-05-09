@@ -99,6 +99,23 @@ class WhileLoop(object):
         )
 
 
+class ForLoop(object):
+    def __init__(self, variable, expression, body):
+        self.variable = variable
+        self.expression = expression
+        self.body = body
+
+    def __str__(self):
+        return repr(self)
+    
+    def __repr__(self):
+        return 'ForLoop(var: {}, expr: {}, body: {})'.format(
+            repr(self.variable),
+            repr(self.expression),
+            repr(self.body),
+        )
+
+
 class Analyzer(object):
     def __init__(self, ast):
         self.ast = ast
@@ -196,8 +213,13 @@ class Analyzer(object):
         return node
             
     def parse_for_statement(self, node):
-        # STUB!
-        return node
+        # for_statement: KW_FOR IDENTIFIER KW_IN expression _NL code_block_end
+        assert isinstance(node, lark.tree.Tree)
+        assert len(node.children) == 5
+        var = node.children[1].value
+        expr = self.parse_expression(node.children[3])
+        cb = node.children[4]
+        return ForLoop(variable=var, expression=expr, body=cb)
             
     def parse_while_statement(self, node):
         # while_statement: KW_WHILE expression _NL code_block_end
