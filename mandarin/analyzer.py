@@ -164,7 +164,7 @@ class Analyzer(object):
         # var_assignment: front_atomic_expression assignment_op expression
         assert isinstance(node, lark.tree.Tree)
         assert len(node.children) == 3
-        varspec = self.parse_var_spec(node.children[0])
+        varspec = self.parse_expression(node.children[0])
         operator = self.parse_operator(node.children[1])
         expr = self.parse_expression(node.children[2])
         return VariableAssignment(varspec=varspec, operator=operator, expr=expr)
@@ -175,10 +175,6 @@ class Analyzer(object):
         if len(node.children) == 1 and isinstance(node.children[0], lark.tree.Tree):
             return self.parse_operator(node.children[0])
         return ''.join([x.value for x in node.children])
-
-    def parse_var_spec(self, node):
-        # STUB!
-        return node
 
     def parse_if_statement(self, node):
         # STUB!
