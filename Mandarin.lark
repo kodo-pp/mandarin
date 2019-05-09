@@ -45,7 +45,7 @@ code_block_end: code_statement* KW_END
 
 var_declaration: typename IDENTIFIER (strict_assignment_op expression)?
 
-var_assignment: atomic_expression assignment_op expression
+var_assignment: front_atomic_expression assignment_op expression
 
 // TODO: this is stub!
 typename: IDENTIFIER

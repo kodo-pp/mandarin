@@ -67,6 +67,23 @@ class FunctionDefiniton(object):
         return 'FunctionDefiniton(decl: {}, body: {})'.format(repr(self.decl), repr(self.body))
 
 
+class VariableAssignment(object):
+    def __init__(self, varspec, operator, expr):
+        self.varspec = varspec
+        self.operator = operator
+        self.expr = expr
+
+    def __str__(self):
+        return repr(self)
+    
+    def __repr__(self):
+        return 'VarAssignment(var: {}, op: {}, expr: {})'.format(
+            repr(self.varspec),
+            repr(self.operator),
+            repr(self.expr),
+        )
+
+
 class Analyzer(object):
     def __init__(self, ast):
         self.ast = ast
@@ -117,8 +134,64 @@ class Analyzer(object):
         return [self.parse_code_statement(st) for st in statements]
 
     def parse_code_statement(self, statement):
-        # STUB
-        return statement
+        # ?code_statement: (expression
+        #     | var_declaration
+        #     | var_assignment
+        #     | if_statement
+        #     | for_statement
+        #     | while_statement) _NL
+        assert isinstance(statement, lark.tree.Tree)
+        if statement.data == 'var_declaration':
+            return self.parse_var_declaration(statement)
+        elif statement.data == 'var_assignment':
+            return self.parse_var_assignment(statement)
+        elif statement.data == 'if_statement':
+            return self.parse_if_statement(statement)
+        elif statement.data == 'for_statement':
+            return self.parse_for_statement(statement)
+        elif statement.data == 'while_statement':
+            return self.parse_while_statement(statement)
+        elif statement.data == 'expression':
+            return self.parse_expression(statement)
+        else:
+            assert False, 'Unknown code statement: {}'.format(statement.data)
+            
+    def parse_var_declaration(self, node):
+        # STUB!
+        return node
+            
+    def parse_var_assignment(self, node):
+        # var_assignment: front_atomic_expression assignment_op expression
+        assert isinstance(node, lark.tree.Tree)
+        assert len(node.children) == 3
+        varspec = self.parse_var_spec(node.children[0])
+        operator = self.parse_operator(node.children[1])
+        expr = self.parse_expression(node.children[2])
+        return VariableAssignment(varspec=varspec, operator=operator, expr=expr)
+
+    def parse_var_spec(self, node):
+        # STUB!
+        return node
+
+    def parse_operator(self, node):
+        # STUB!
+        return node
+
+    def parse_if_statement(self, node):
+        # STUB!
+        return node
+            
+    def parse_for_statement(self, node):
+        # STUB!
+        return node
+            
+    def parse_while_statement(self, node):
+        # STUB!
+        return node
+            
+    def parse_expression(self, node):
+        # STUB!
+        return node
 
     def parse_function_declaration(self, node):
         # native_function_declaration: (0) KW_DEF (1) KW_NATIVE (2) IDENTIFIER "(" (3) typed_arglist ")"
