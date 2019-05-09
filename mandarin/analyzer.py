@@ -84,6 +84,21 @@ class VariableAssignment(object):
         )
 
 
+class WhileLoop(object):
+    def __init__(self, condition, body):
+        self.condition = condition
+        self.body = body
+
+    def __str__(self):
+        return repr(self)
+    
+    def __repr__(self):
+        return 'WhileLoop(cond: {}, body: {})'.format(
+            repr(self.condition),
+            repr(self.body),
+        )
+
+
 class Analyzer(object):
     def __init__(self, ast):
         self.ast = ast
@@ -185,8 +200,12 @@ class Analyzer(object):
         return node
             
     def parse_while_statement(self, node):
-        # STUB!
-        return node
+        # while_statement: KW_WHILE expression _NL code_block_end
+        assert isinstance(node, lark.tree.Tree)
+        assert len(node.children) == 3
+        expr = node.children[1]
+        cb = node.children[2]
+        return WhileLoop(condition=expr, body=cb)
             
     def parse_expression(self, node):
         # STUB!
