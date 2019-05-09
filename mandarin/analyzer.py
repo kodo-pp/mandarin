@@ -169,11 +169,14 @@ class Analyzer(object):
         expr = self.parse_expression(node.children[2])
         return VariableAssignment(varspec=varspec, operator=operator, expr=expr)
 
-    def parse_var_spec(self, node):
-        # STUB!
-        return node
-
     def parse_operator(self, node):
+        assert isinstance(node, lark.tree.Tree)
+        assert all([isinstance(x, lark.lexer.Token) for x in node.children]) or len(node.children) == 1
+        if len(node.children) == 1 and isinstance(node.children[0], lark.tree.Tree):
+            return self.parse_operator(node.children[0])
+        return ''.join([x.value for x in node.children])
+
+    def parse_var_spec(self, node):
         # STUB!
         return node
 
