@@ -33,7 +33,7 @@ typed_arg: typename? IDENTIFIER
 
 code_block_end: code_statement* KW_END
 
-code_statement: (expression
+?code_statement: (expression
     | var_declaration
     | var_assignment
     | if_statement
@@ -47,6 +47,7 @@ var_declaration: typename IDENTIFIER (strict_assignment_op expression)?
 
 var_assignment: atomic_expression assignment_op expression
 
+// TODO: this is stub!
 typename: IDENTIFIER
 
 
@@ -73,9 +74,11 @@ while_statement: KW_WHILE expression _NL code_block_end
 
 expression: g__binop_toplevel
 
-?front_atomic_expression: unop* atomic_expression
+front_atomic_expression: unop* atomic_expression
 
-?atomic_expression: literal | IDENTIFIER | "(" expression ")" | atomic_expression call_operator
+?atomic_expression: literal | IDENTIFIER | "(" expression ")" | function_call
+
+function_call: atomic_expression call_operator
 
 ?literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
 
