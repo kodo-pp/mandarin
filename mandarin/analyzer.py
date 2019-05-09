@@ -100,8 +100,25 @@ class Analyzer(object):
         return FunctionDefiniton(decl=decl, body=body)
     
     def parse_code_block(self, cb_node):
+        # code_block_<***>: code_statement* KW_<***>
+        # <***> in [end, else, elif]
+        assert isinstance(cb_node, lark.tree.Tree)
+        assert cb_node.data in ['code_block_end', 'code_block_elif', 'code_block_else']
+        assert len(cb_node.children) >= 1
+        end_keyword = cb_node.children[-1]
+        assert isinstance(end_keyword, lark.lexer.Token)
+        assert end_keyword.type == {
+            'code_block_end': 'KW_END',
+            'code_block_elif': 'KW_ELIF',
+            'code_block_else': 'KW_ELSE',
+        }[cb_node.data]
+
+        statements = cb_node.children[:-1]
+        return [self.parse_code_statement(st) for st in statements]
+
+    def parse_code_statement(self, statement):
         # STUB
-        return cb_node
+        return statement
 
     def parse_function_declaration(self, node):
         # native_function_declaration: (0) KW_DEF (1) KW_NATIVE (2) IDENTIFIER "(" (3) typed_arglist ")"
