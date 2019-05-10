@@ -19,14 +19,15 @@ import lark
 
 
 class Typename(object):
-    def __init__(self, name):
+    def __init__(self, name, lvalue=False):
         self.name = name
+        self.lvalue = lvalue
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
-        return 'Typename({})'.format(self.name)
+        return 'Typename({}{})'.format('Lvalue ' if self.lvalue else '', self.name)
 
 
 class FunctionArgument(object):
@@ -65,6 +66,57 @@ class FunctionDefiniton(object):
     
     def __repr__(self):
         return 'FunctionDefiniton(decl: {}, body: {})'.format(repr(self.decl), repr(self.body))
+
+
+class Expression(object):
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return 'Expr ???'
+
+    def get_type(self):
+        raise NotImplementedError()
+
+
+class StubExpression(Expression):
+    def __init__(self, node):
+        self.node = node
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return 'Expr stub <{}>: {}'.format(self.get_type(), self.node)
+
+    def get_type(self):
+        return Typename('var')
+
+
+def deduce_type_binop(op, left, right):
+    # STUB!
+    return Typename('var')
+
+
+class BinaryOperatorExpression(Expression):
+    def __init__(self, op, lhs, rhs):
+        self.op = op
+        self.lhs = lhs
+        self.rhs = rhs
+
+    def __repr__(self):
+        return 'Expr <{}> operator {} ({}, {})'.format(
+            self.get_type().name,
+            self.op,
+            repr(self.lhs),
+            repr(self.rhs),
+        )
+
+    def get_type(self):
+        # TODO: move to constructor, return already computed value
+        lt = self.lhs.get_type()
+        rt = self.lhs.get_type()
+        return deduce_type_binop(op=self.op, left=lt, right=lt)
 
 
 class VariableAssignment(object):
@@ -113,6 +165,26 @@ class ForLoop(object):
             repr(self.variable),
             repr(self.expression),
             repr(self.body),
+        )
+
+
+class IfStatement(object):
+    def __init__(self, condition, true_branch, false_branch, alternatives):
+        self.condition = condition
+        self.true_branch = true_branch
+        self.false_branch = false_branch
+        self.alternatives = alternatives
+
+    def __str__(self):
+        return repr(self)
+    
+    def __repr__(self):
+        alternatives = ', '.join(['elif {}: {}'.format(c, b) for c, b in self.alternatives])
+        return 'IfStatement(if {}: {}, {}{})'.format(
+            repr(self.condition),
+            repr(self.true_branch),
+            alternatives,
+            '' if self.false_branch is None else ', else: {}'.format(repr(self.false_branch)),
         )
 
 
@@ -209,16 +281,41 @@ class Analyzer(object):
         return ''.join([x.value for x in node.children])
 
     def parse_if_statement(self, node):
-        # STUB!
-        return node
-            
+        # if_statement: KW_IF expression _NL (code_block_elif expression _NL)* ...
+        # ... (code_block_else _NL)? code_block_end
+        assert isinstance(node, lark.tree.Tree)
+        main_condition = node.children[1]
+        true_branch = self.parse_code_block(node.children[2])
+        alternatives = []       # (condition, body) tuples
+        false_branch = None
+
+        nodes = node.children
+        i = 3
+        while i < len(nodes):
+            assert i + 1 < len(nodes)
+            cond = self.parse_expression(nodes[i])
+            body = self.parse_code_block(nodes[i+1])
+            alternatives.append((cond, body))
+            if nodes[i+1].data == 'code_block_else':
+                break
+        if nodes[i+1].data == 'code_block_else':
+            false_branch = self.parse_code_block(nodes[i+2])
+        assert i + 3 == len(nodes)
+        
+        return IfStatement(
+            condition=main_condition,
+            true_branch=true_branch,
+            false_branch=false_branch,
+            alternatives=alternatives,
+        )
+
     def parse_for_statement(self, node):
         # for_statement: KW_FOR IDENTIFIER KW_IN expression _NL code_block_end
         assert isinstance(node, lark.tree.Tree)
         assert len(node.children) == 5
         var = node.children[1].value
         expr = self.parse_expression(node.children[3])
-        cb = node.children[4]
+        cb = self.parse_code_block(node.children[4])
         return ForLoop(variable=var, expression=expr, body=cb)
             
     def parse_while_statement(self, node):
@@ -230,8 +327,21 @@ class Analyzer(object):
         return WhileLoop(condition=expr, body=cb)
             
     def parse_expression(self, node):
+        assert isinstance(node, lark.tree.Tree)
+        if node.data == 'expression':
+            assert len(node.children) == 1
+            return self.parse_expression(node.children[0])
+        if node.data.endswith('atomic_expression'):
+            return self.parse_atomic_expression(node)
+        assert node.data == 'binary_operator_node'
+        op = node.op
+        lhs = self.parse_expression(node.lhs)
+        rhs = self.parse_expression(node.rhs)
+        return BinaryOperatorExpression(op=op, lhs=lhs, rhs=rhs)
+
+    def parse_atomic_expression(self, node):
         # STUB!
-        return node
+        return StubExpression(node)
 
     def parse_function_declaration(self, node):
         # native_function_declaration: (0) KW_DEF (1) KW_NATIVE (2) IDENTIFIER "(" (3) typed_arglist ")"
