@@ -93,7 +93,13 @@ class StubExpression(Expression):
         return Typename('var')
 
 
+# TODO: move these to Analyzer
 def deduce_type_binop(op, left, right):
+    # STUB!
+    return Typename('var')
+
+
+def deduce_type_unop(op, argt):
     # STUB!
     return Typename('var')
 
@@ -105,7 +111,7 @@ class BinaryOperatorExpression(Expression):
         self.rhs = rhs
 
     def __repr__(self):
-        return 'Expr <{}> operator {} ({}, {})'.format(
+        return 'Expr <{}> operator2 {} ({}, {})'.format(
             self.get_type().name,
             self.op,
             repr(self.lhs),
@@ -117,6 +123,24 @@ class BinaryOperatorExpression(Expression):
         lt = self.lhs.get_type()
         rt = self.lhs.get_type()
         return deduce_type_binop(op=self.op, left=lt, right=lt)
+
+
+class UnaryOperatorExpression(Expression):
+    def __init__(self, op, arg):
+        self.op = op
+        self.arg = arg
+
+    def __repr__(self):
+        return 'Expr <{}> operator1 {} ({})'.format(
+            self.get_type().name,
+            self.op,
+            repr(self.arg),
+        )
+
+    def get_type(self):
+        # TODO: move to constructor, return already computed value
+        argt = self.arg.get_type()
+        return deduce_type_unop(op=self.op, argt=argt)
 
 
 class VariableAssignment(object):
@@ -284,7 +308,7 @@ class Analyzer(object):
         # if_statement: KW_IF expression _NL (code_block_elif expression _NL)* ...
         # ... (code_block_else _NL)? code_block_end
         assert isinstance(node, lark.tree.Tree)
-        main_condition = node.children[1]
+        main_condition = self.parse_expression(node.children[1])
         true_branch = self.parse_code_block(node.children[2])
         alternatives = []       # (condition, body) tuples
         false_branch = None
@@ -298,9 +322,11 @@ class Analyzer(object):
             alternatives.append((cond, body))
             if nodes[i+1].data == 'code_block_else':
                 break
-        if nodes[i+1].data == 'code_block_else':
-            false_branch = self.parse_code_block(nodes[i+2])
-        assert i + 3 == len(nodes)
+            i += 2
+        if i < len(nodes):
+            if nodes[i+1].data == 'code_block_else':
+                false_branch = self.parse_code_block(nodes[i+2])
+            assert i + 3 == len(nodes)
         
         return IfStatement(
             condition=main_condition,
@@ -340,6 +366,15 @@ class Analyzer(object):
         return BinaryOperatorExpression(op=op, lhs=lhs, rhs=rhs)
 
     def parse_atomic_expression(self, node):
+        # FIXME: loops on old_tests/parser/006-unary-operators.man
+        assert isinstance(node, lark.tree.Tree)
+        assert node.data == 'front_atomic_expression'
+        atom = self.parse_pure_atomic_expression(node.children[-1])
+        for unop in node.children[::-1][1:]:
+            atom = UnaryOperatorExpression(op=self.parse_operator(unop), arg=atom)
+        return atom
+
+    def parse_pure_atomic_expression(self, node):
         # STUB!
         return StubExpression(node)
 
