@@ -1,0 +1,11 @@
+def main()
+    # "dot" starts with "do"
+    dot = "."
+    # "input" starts with "in"
+    input()
+    # just keyword
+    for i in 1..5
+        # just identifier
+        print(i)
+    end
+end

@@ -1,0 +1,16 @@
+class Vector
+    def new(x, y)
+        self.x = x
+        self.y = y
+        self.length = 2
+    end
+
+    def __inplace_add__(Vector other)
+        self.x += other.x
+        self.y += other.y
+    end
+
+    var x
+    var y
+    Int length
+end

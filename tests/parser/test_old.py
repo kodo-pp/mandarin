@@ -46,6 +46,26 @@ def test_007():
     _test_parses('./old_tests/parser/007-while.man')
 
 
+def test_008():
+    _test_parses('./old_tests/parser/008-tricky-identifiers.man')
+
+
+def test_009():
+    _test_parses('./old_tests/parser/009-whitespace.man')
+
+
+def test_010():
+    _test_parses('./old_tests/parser/010-return.man')
+
+
+def test_011():
+    _test_parses('./old_tests/parser/011-methods.man')
+
+
+def test_012():
+    _test_parses('./old_tests/parser/012-classes.man')
+
+
 
 def test_inv_001():
     _test_parses('./old_tests/parser/invalid/001-func-without-end.man', expect=False)
