@@ -145,3 +145,11 @@ def test_inv_019():
 
 def test_inv_020():
     _test_parses('./old_tests/parser/invalid/020-extra-closing-paren.man', expect=False)
+
+
+def test_inv_021():
+    _test_parses('./old_tests/parser/invalid/021-keyword-as-identifier.man', expect=False)
+
+
+def test_inv_022():
+    _test_parses('./old_tests/parser/invalid/022-keyword-as-identifier-declaration.man', expect=False)

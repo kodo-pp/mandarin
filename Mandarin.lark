@@ -94,6 +94,8 @@ KW_IF.2:     /\bif\b/
 KW_IN.2:     /\bin\b/
 KW_NATIVE.2: /\bnative\b/
 KW_WHILE.2:  /\bwhile\b/
+KW_RETURN.2:  /\breturn\b/
+KW_CLASS.2:  /\bclass\b/
 
 IDENTIFIER: /[a-zA-Z_][a-zA-Z_0-9]*/
 
