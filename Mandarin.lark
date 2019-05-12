@@ -97,7 +97,9 @@ KW_WHILE.2:  /\bwhile\b/
 KW_RETURN.2:  /\breturn\b/
 KW_CLASS.2:  /\bclass\b/
 
-IDENTIFIER: /[a-zA-Z_][a-zA-Z_0-9]*/
+// I'm sorry about this piece of sh*t
+// See https://stackoverflow.com/a/2108017 for a piece of clarification of the hell happening here
+IDENTIFIER:    /\b(?!(def|if|elif|else|end|for|while|in|while|native)\b|[^a-zA-Z0-9_])[a-zA-Z_][a-zA-Z0-9_]*/
 
 NUMBER:        /[0-9]+/
 STRING_DOUBLE: /"([^"\\]|\\.)*"/
