@@ -87,7 +87,7 @@ class StubExpression(Expression):
         return repr(self)
 
     def __repr__(self):
-        return 'Expr stub <{}>: {}'.format(self.get_type(), self.node)
+        return 'Expr <{}> stub: {}'.format(self.get_type(), self.node)
 
     def get_type(self):
         return Typename('var')
@@ -100,6 +100,11 @@ def deduce_type_binop(op, left, right):
 
 
 def deduce_type_unop(op, argt):
+    # STUB!
+    return Typename('var')
+
+
+def deduce_call_type(func, args):
     # STUB!
     return Typename('var')
 
@@ -143,6 +148,51 @@ class UnaryOperatorExpression(Expression):
         return deduce_type_unop(op=self.op, argt=argt)
 
 
+class FunctionCallExpression(Expression):
+    def __init__(self, func, args):
+        self.func = func
+        self.args = args
+
+    def __repr__(self):
+        return 'Expr <{}> call: {}({})'.format(
+            self.get_type().name,
+            repr(self.func),
+            ', '.join(map(repr, self.args)),
+        )
+
+    def get_type(self):
+        # TODO: move to constructor, return already computed value
+        return deduce_call_type(func=self.func, args=self.args)
+
+
+class LiteralExpression(Expression):
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self):
+        return 'Expr <{}> {}: {}'.format(
+            self.get_type().name,
+            self.name,
+            repr(self.value),
+        )
+
+    def get_type(self):
+        return self.typename
+
+    typename = Typename('var')
+    name = 'literal'
+
+
+class StringExpression(LiteralExpression):
+    typename = Typename('Str')
+    name = 'str'
+
+
+class IntegerExpression(LiteralExpression):
+    typename = Typename('Int')
+    name = 'int'
+
+
 class VariableAssignment(object):
     def __init__(self, varspec, operator, expr):
         self.varspec = varspec
@@ -158,7 +208,7 @@ class VariableAssignment(object):
             repr(self.operator),
             repr(self.expr),
         )
-
+        
 
 class VariableDeclaration(object):
     def __init__(self, type, name, init_value=None):
@@ -399,8 +449,60 @@ class Analyzer(object):
         return atom
 
     def parse_pure_atomic_expression(self, node):
+        # ?atomic_expression: [1] literal | [2] IDENTIFIER | [3] "(" expression ")" | [4] function_call
+        if isinstance(node, lark.lexer.Token):
+            # [2]
+            assert node.type == 'IDENTIFIER'
+            return self.get_variable(node.value)
+        else:
+            # [1,3,4]
+            if node.data == 'literal':
+                # [1]
+                return self.parse_literal(node)
+            elif node.data == 'expression':
+                # [3]
+                return self.parse_expression(node)
+            else:
+                # [4]
+                assert node.data == 'function_call'
+                return self.parse_function_call(node)
+
+    def parse_literal(self, node):
+        # literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
+        assert isinstance(node, lark.tree.Tree)
+        assert len(node.children) == 1
+        assert isinstance(node.children[0], lark.lexer.Token)
+        lit = node.children[0]
+        if lit.type == 'NUMBER':
+            # TODO: floats
+            return IntegerExpression(int(lit.value))
+        elif lit.type in ['STRING_SINGLE', 'STRING_DOUBLE']:
+            return StringExpression(self.unescape_string(lit.value))
+        else:
+            assert False, 'Unknown literal type: {}'.format(lit.type)
+
+    def unescape_string(self, string):
         # STUB!
-        return StubExpression(node)
+        return string
+
+    def parse_function_call(self, node):
+        # function_call: atomic_expression call_operator
+        assert isinstance(node, lark.tree.Tree)
+        assert node.data == 'function_call'
+        assert len(node.children) == 2
+        functor = self.parse_pure_atomic_expression(node.children[0])
+        args = self.parse_call_operator(node.children[1])
+        return FunctionCallExpression(func=functor, args=args)
+
+    def parse_call_operator(self, node):
+        # call_operator: "(" (expression ("," expression)*)? ")"
+        assert isinstance(node, lark.tree.Tree)
+        assert node.data == 'call_operator'
+        return [self.parse_expression(x) for x in node.children]
+
+    def get_variable(self, varname):
+        # STUB!
+        return StubExpression(varname)
 
     def parse_function_declaration(self, node):
         # native_function_declaration: (0) KW_DEF (1) KW_NATIVE (2) IDENTIFIER "(" (3) typed_arglist ")"

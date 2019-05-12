@@ -80,7 +80,7 @@ front_atomic_expression: unop* atomic_expression
 
 function_call: atomic_expression call_operator
 
-?literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
+literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
 
 call_operator: "(" (expression ("," expression)*)? ")"
 
