@@ -160,6 +160,23 @@ class VariableAssignment(object):
         )
 
 
+class VariableDeclaration(object):
+    def __init__(self, type, name, init_value=None):
+        self.type = type
+        self.name = name
+        self.init_value = init_value
+
+    def __str__(self):
+        return repr(self)
+    
+    def __repr__(self):
+        return 'VarDeclaration(var: {}, type: {}{})'.format(
+            self.name,
+            repr(self.type),
+            ', init: {}'.format(repr(self.init_value)) if self.init_value is not None else '',
+        )
+
+
 class WhileLoop(object):
     def __init__(self, condition, body):
         self.condition = condition
@@ -285,8 +302,15 @@ class Analyzer(object):
             assert False, 'Unknown code statement: {}'.format(statement.data)
             
     def parse_var_declaration(self, node):
-        # STUB!
-        return node
+        # var_declaration: typename IDENTIFIER (strict_assignment_op expression)?
+        assert isinstance(node, lark.tree.Tree)
+        type = self.parse_typename(node.children[0])
+        name = node.children[1].value
+        value = None
+        if len(node.children) > 2:
+            assert len(node.children) == 4
+            value = self.parse_expression(node.children[3])
+        return VariableDeclaration(type=type, name=name, init_value=value)
             
     def parse_var_assignment(self, node):
         # var_assignment: front_atomic_expression assignment_op expression
