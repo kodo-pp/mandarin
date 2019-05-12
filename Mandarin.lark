@@ -18,8 +18,17 @@
 
 code: toplevel_statement*
 
-?toplevel_statement: (function_definition | native_function_declaration)? _NL
+?toplevel_statement: (function_definition | native_function_declaration | class_definition)? _NL
 
+
+// Class
+
+class_definition: KW_CLASS IDENTIFIER _NL class_block_end
+
+class_block_end: class_statement KW_END
+
+?class_statement: (function_definition
+    | var_declaration) _NL
 
 // Function
 
