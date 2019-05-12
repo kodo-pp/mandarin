@@ -95,9 +95,7 @@ KW_IN.2:     /\bin\b/
 KW_NATIVE.2: /\bnative\b/
 KW_WHILE.2:  /\bwhile\b/
 
-// I'm sorry about this piece of sh*t
-// See https://stackoverflow.com/a/2108017 for a piece of clarification of the hell happening here
-IDENTIFIER:    /\b(?!(def|if|elif|else|end|for|while|in|while|native)\b|[^a-zA-Z0-9_])[a-zA-Z_][a-zA-Z0-9_]*/
+IDENTIFIER: /[a-zA-Z_][a-zA-Z_0-9]*/
 
 NUMBER:        /[0-9]+/
 STRING_DOUBLE: /"([^"\\]|\\.)*"/
