@@ -21,7 +21,7 @@ from setuptools import setup
 
 setup(
     name            = 'mandarin',
-    version         = '1.0.0alpha',
+    version         = '0.0.0',
     description     = 'A mixedly-typed compiled programming language',
     author          = 'Alexander Korzun',
     author_email    = 'korzun.sas@mail.ru',
