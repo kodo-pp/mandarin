@@ -85,7 +85,12 @@ expression: g__binop_toplevel
 
 front_atomic_expression: unop* atomic_expression
 
-?atomic_expression: literal | IDENTIFIER | "(" expression ")" | function_call
+?atomic_expression: literal | symbol | "(" expression ")" | function_call | property
+
+property: atomic_expression C_DOT IDENTIFIER
+
+//symbol: IDENTIFIER (C_DOT IDENTIFIER)*
+symbol: IDENTIFIER
 
 function_call: atomic_expression call_operator
 

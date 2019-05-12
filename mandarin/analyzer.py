@@ -56,6 +56,25 @@ class FunctionDeclaration(object):
         )
 
 
+class ClassDefinition(object):
+    def __init__(self, name, members, method_decls, method_defs):
+        self.name = name
+        self.members = members
+        self.method_decls = method_decls
+        self.method_defs = method_defs
+    
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return 'Class(name: {}, members: {}, methods: (decls: {}, defs: {}))'.format(
+            self.name,
+            [repr(x) for x in self.members],
+            [repr(x) for x in self.method_decls],
+            [repr(x) for x in self.method_defs],
+        )
+
+
 class FunctionDefiniton(object):
     def __init__(self, decl, body):
         self.decl = decl
@@ -109,6 +128,11 @@ def deduce_call_type(func, args):
     return Typename('var')
 
 
+def deduce_type_property(objt, prop):
+    # STUB!
+    return Typename('var')
+
+
 class BinaryOperatorExpression(Expression):
     def __init__(self, op, lhs, rhs):
         self.op = op
@@ -146,6 +170,24 @@ class UnaryOperatorExpression(Expression):
         # TODO: move to constructor, return already computed value
         argt = self.arg.get_type()
         return deduce_type_unop(op=self.op, argt=argt)
+
+
+class PropertyExpression(Expression):
+    def __init__(self, obj, prop):
+        self.obj = obj
+        self.prop = prop
+
+    def __repr__(self):
+        return 'Expr <{}> prop ({}) -> {}'.format(
+            self.get_type().name,
+            repr(self.obj),
+            repr(self.prop),
+        )
+
+    def get_type(self):
+        # TODO: move to constructor, return already computed value
+        objt = self.obj.get_type()
+        return deduce_type_property(objt=objt, prop=self.prop)
 
 
 class FunctionCallExpression(Expression):
@@ -449,23 +491,30 @@ class Analyzer(object):
         return atom
 
     def parse_pure_atomic_expression(self, node):
-        # ?atomic_expression: [1] literal | [2] IDENTIFIER | [3] "(" expression ")" | [4] function_call
-        if isinstance(node, lark.lexer.Token):
+        # ?atomic_expression: [1] literal | [2] symbol | [3] "(" expression ")" | [4] function_call | [5] property
+        assert isinstance(node, lark.tree.Tree)
+        if node.data == 'literal':
+            # [1]
+            return self.parse_literal(node)
+        elif node.data == 'symbol':
             # [2]
-            assert node.type == 'IDENTIFIER'
-            return self.get_variable(node.value)
+            return self.get_variable(node.children[0])
+        elif node.data == 'expression':
+            # [3]
+            return self.parse_expression(node)
+        elif node.data == 'function_call':
+            # [4]
+            return self.parse_function_call(node)
         else:
-            # [1,3,4]
-            if node.data == 'literal':
-                # [1]
-                return self.parse_literal(node)
-            elif node.data == 'expression':
-                # [3]
-                return self.parse_expression(node)
-            else:
-                # [4]
-                assert node.data == 'function_call'
-                return self.parse_function_call(node)
+            assert node.data == 'property'
+            return self.parse_property(node)
+
+    def parse_property(self, node):
+        assert isinstance(node, lark.tree.Tree)
+        assert len(node.children) == 3
+        obj = self.parse_pure_atomic_expression(node.children[0])
+        prop = node.children[2].value
+        return PropertyExpression(obj=obj, prop=prop)
 
     def parse_literal(self, node):
         # literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
