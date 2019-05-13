@@ -87,6 +87,9 @@ front_atomic_expression: unop* atomic_expression
 
 ?atomic_expression: literal | symbol | "(" expression ")" | function_call | property
 
+// CAN'T THAT FUCKING LALR PARSE THIS SIMPLE THING?
+// OR IS LARK'S IMPLEMENTATION ~~FUCKINGLY~~ TOTALLY FLAWED?
+// Fuck it, switching to Earley
 property: atomic_expression C_DOT IDENTIFIER
 
 //symbol: IDENTIFIER (C_DOT IDENTIFIER)*
@@ -99,17 +102,17 @@ literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
 call_operator: "(" (expression ("," expression)*)? ")"
 
 
-KW_DEF.2:    /\bdef\b/
-KW_ELIF.2:   /\belif\b/
-KW_ELSE.2:   /\belse\b/
-KW_END.2:    /\bend\b/
-KW_FOR.2:    /\bfor\b/
-KW_IF.2:     /\bif\b/
-KW_IN.2:     /\bin\b/
-KW_NATIVE.2: /\bnative\b/
-KW_WHILE.2:  /\bwhile\b/
-KW_RETURN.2:  /\breturn\b/
-KW_CLASS.2:  /\bclass\b/
+KW_DEF:    /\bdef\b/
+KW_ELIF:   /\belif\b/
+KW_ELSE:   /\belse\b/
+KW_END:    /\bend\b/
+KW_FOR:    /\bfor\b/
+KW_IF:     /\bif\b/
+KW_IN:     /\bin\b/
+KW_NATIVE: /\bnative\b/
+KW_WHILE:  /\bwhile\b/
+KW_RETURN:  /\breturn\b/
+KW_CLASS:  /\bclass\b/
 
 // I'm sorry about this piece of sh*t
 // See https://stackoverflow.com/a/2108017 for a piece of clarification of the hell happening here

@@ -30,11 +30,11 @@ def run_parser(code):
     parser = Lark(
         grammar.GRAMMAR,
         start = 'code',
-        parser = 'lalr',
-        lexer = 'contextual',
-        transformer = postparser.PostParser
+        parser = 'earley',
     )
     ast = parser.parse(code)
+    pp = postparser.PostParser()
+    ast = pp.transform(ast)
     
     return ast
 
