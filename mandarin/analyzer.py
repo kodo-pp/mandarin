@@ -24,7 +24,7 @@ class Typename(object):
         self.lvalue = lvalue
 
     def __str__(self):
-        return self.name
+        return '{}{}'.format('Lvalue ' if self.lvalue else '', self.name)
 
     def __repr__(self):
         return 'Typename({}{})'.format('Lvalue ' if self.lvalue else '', self.name)
@@ -110,6 +110,21 @@ class StubExpression(Expression):
 
     def get_type(self):
         return Typename('var')
+
+
+class IdentifierExpression(Expression):
+    def __init__(self, name, typename):
+        self.name = name
+        self.typename = typename
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return 'Expr <{}> id: {}'.format(self.get_type(), self.name)
+
+    def get_type(self):
+        return self.typename
 
 
 # TODO: move these to Analyzer
@@ -550,8 +565,7 @@ class Analyzer(object):
         return [self.parse_expression(x) for x in node.children]
 
     def get_variable(self, varname):
-        # STUB!
-        return StubExpression(varname)
+        return IdentifierExpression(varname, Typename('var', lvalue=True))
 
     def parse_function_declaration(self, node):
         # native_function_declaration: (0) KW_DEF (1) KW_NATIVE (2) IDENTIFIER "(" (3) typed_arglist ")"
