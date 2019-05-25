@@ -18,6 +18,10 @@
 import lark
 
 
+class SemanticalError(Exception):
+    pass
+
+
 class Typename(object):
     def __init__(self, name, lvalue=False):
         self.name = name
@@ -336,6 +340,17 @@ class IfStatement(object):
         )
 
 
+class FunctionReturn(object):
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return 'FunctionReturn({})'.format(self.expr)
+
+
 class Analyzer(object):
     def __init__(self, ast):
         self.ast = ast
@@ -405,9 +420,18 @@ class Analyzer(object):
             return self.parse_while_statement(statement)
         elif statement.data == 'expression':
             return self.parse_expression(statement)
+        elif statement.data == 'return_statement':
+            return self.parse_return(statement)
         else:
             assert False, 'Unknown code statement: {}'.format(statement.data)
             
+    def parse_return(self, statement):
+        # return_statement: KW_RETURN expression
+        assert isinstance(statement, lark.tree.Tree)
+        assert len(statement.children) == 2
+
+        return FunctionReturn(self.parse_expression(statement.children[1]))
+
     def parse_var_declaration(self, node):
         # var_declaration: typename IDENTIFIER (strict_assignment_op expression)?
         assert isinstance(node, lark.tree.Tree)
@@ -426,6 +450,9 @@ class Analyzer(object):
         varspec = self.parse_expression(node.children[0])
         operator = self.parse_operator(node.children[1])
         expr = self.parse_expression(node.children[2])
+        if not varspec.get_type().lvalue:
+            # TODO: file, line & column position
+            raise SemanticalError('At variable assignment: left-hand side is not a lvalue')
         return VariableAssignment(varspec=varspec, operator=operator, expr=expr)
 
     def parse_operator(self, node):

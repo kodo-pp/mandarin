@@ -47,7 +47,8 @@ code_block_end: code_statement* KW_END
     | var_assignment
     | if_statement
     | for_statement
-    | while_statement) _NL
+    | while_statement
+    | return_statement) _NL
 
 
 // Variable
@@ -78,6 +79,10 @@ for_statement: KW_FOR IDENTIFIER KW_IN expression _NL code_block_end
 
 while_statement: KW_WHILE expression _NL code_block_end
 
+
+// Return statement
+
+return_statement: KW_RETURN expression
 
 // Expression
 

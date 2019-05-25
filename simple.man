@@ -1,4 +1,11 @@
+def foo(a, b)
+    return a + b
+end
+
+
 def main()
     Int a
     Float b = 4
+    a = 5
+    2 = 4
 end

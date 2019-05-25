@@ -16,7 +16,6 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import os
-import pprint
 import sys
 
 from . import postparser
@@ -44,19 +43,24 @@ def main():
         print('Usage: mandarin <file>')
         sys.exit(1)
 
-    source_filename = sys.argv[1]
-    with open(source_filename) as f:
-        code = f.read()
+    try:
+        source_filename = sys.argv[1]
+        with open(source_filename) as f:
+            code = f.read()
 
-    ast = run_parser(code)
-    #print(ast.pretty())
-    an = analyzer.Analyzer(ast)
-    print('-- FUNCTION DECLARATIONS --')
-    pprint.pprint(list(an.get_function_declarations()))
-    print()
-    print('-- FUNCTION DEFINITIONS --')
-    pprint.pprint(list(an.get_function_definitions()))
-
+        ast = run_parser(code)
+        #print(ast.pretty())
+        an = analyzer.Analyzer(ast)
+        decls = list(an.get_function_declarations())
+        defs = list(an.get_function_definitions())
+        print('-- FUNCTION DECLARATIONS --')
+        print(decls)
+        print()
+        print('-- FUNCTION DEFINITIONS --')
+        print(defs)
+    except Exception as e:
+        print('Error: {}: {}'.format(e.__class__.__name__, str(e)), file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
