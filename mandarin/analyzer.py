@@ -149,7 +149,8 @@ def deduce_call_type(func, args):
 
 def deduce_type_property(objt, prop):
     # STUB!
-    return Typename('var')
+    is_lvalue = objt.lvalue
+    return Typename('var', lvalue=is_lvalue)
 
 
 class BinaryOperatorExpression(Expression):
@@ -160,7 +161,7 @@ class BinaryOperatorExpression(Expression):
 
     def __repr__(self):
         return 'Expr <{}> operator2 {} ({}, {})'.format(
-            self.get_type().name,
+            self.get_type(),
             self.op,
             repr(self.lhs),
             repr(self.rhs),
@@ -180,7 +181,7 @@ class UnaryOperatorExpression(Expression):
 
     def __repr__(self):
         return 'Expr <{}> operator1 {} ({})'.format(
-            self.get_type().name,
+            self.get_type(),
             self.op,
             repr(self.arg),
         )
@@ -198,7 +199,7 @@ class PropertyExpression(Expression):
 
     def __repr__(self):
         return 'Expr <{}> prop ({}) -> {}'.format(
-            self.get_type().name,
+            self.get_type(),
             repr(self.obj),
             repr(self.prop),
         )
@@ -216,7 +217,7 @@ class FunctionCallExpression(Expression):
 
     def __repr__(self):
         return 'Expr <{}> call: {}({})'.format(
-            self.get_type().name,
+            self.get_type(),
             repr(self.func),
             ', '.join(map(repr, self.args)),
         )
@@ -232,7 +233,7 @@ class LiteralExpression(Expression):
 
     def __repr__(self):
         return 'Expr <{}> {}: {}'.format(
-            self.get_type().name,
+            self.get_type(),
             self.name,
             repr(self.value),
         )

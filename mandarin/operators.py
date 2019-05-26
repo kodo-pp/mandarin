@@ -26,13 +26,6 @@ OPERATORS = {
 '>': Operator(data='>', priority=100),
 '&&': Operator(data='&&', priority=30),
 '||': Operator(data='||', priority=20),
-'++': Operator(data='++', priority=20),
-'+=': Operator(data='+=', priority=-1000),
-'-=': Operator(data='-=', priority=-1000),
-'*=': Operator(data='*=', priority=-1000),
-'/=': Operator(data='/=', priority=-1000),
-'//=': Operator(data='//=', priority=-1000),
-'%=': Operator(data='%=', priority=-1000),
-'=': Operator(data='=', priority=-1000)
+'++': Operator(data='++', priority=20)
 }
 # vim: set syntax=python:
