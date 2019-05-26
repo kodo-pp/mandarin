@@ -73,3 +73,31 @@ class PostParser(lark.visitors.Transformer):
     @staticmethod
     def g__binop_minus_1000(x):
         return binop(x)
+
+    @staticmethod
+    def g__binop_1000_nl(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_500_nl(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_200_nl(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_100_nl(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_30_nl(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_20_nl(x):
+        return binop(x)
+
+    @staticmethod
+    def g__binop_minus_1000_nl(x):
+        return binop(x)

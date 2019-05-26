@@ -76,6 +76,7 @@ def main():
 
     for k, vs in operator_groups:
         current_operators = []
+        current_operators_nl = []
         for v in vs:
             current_operators.append(
                 '{gp} ({op} {gp})*'.format(
@@ -85,9 +86,20 @@ def main():
                     op = make_op(v['operator'])
                 )
             )
+            current_operators_nl.append(
+                '{gp} (_NL* {op} _NL* {gp})*'.format(
+                    gp = 'g__binop_{}_nl'.format(safe_str(greater_priority[k]))
+                        if greater_priority[k] is not None
+                        else 'front_atomic_expression', # not _nl version
+                    op = make_op(v['operator'])
+                )
+            )
         current_operators_str = ' | '.join(current_operators)
+        current_operators_nl_str = ' | '.join(current_operators_nl)
         operator_rules.append('?{}: {}'.format('g__binop_{}'.format(safe_str(k)), current_operators_str))
+        operator_rules.append('?{}: {}'.format('g__binop_{}_nl'.format(safe_str(k)), current_operators_nl_str))
     operator_rules.append('?g__binop_toplevel: g__binop_{}'.format(safe_str(prev_k)))
+    operator_rules.append('?g__binop_toplevel_nl: g__binop_{}_nl'.format(safe_str(prev_k)))
     operator_rules_str = '\n'.join(operator_rules)
 
     with open('mandarin/operators.py', 'w') as f:

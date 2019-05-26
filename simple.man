@@ -19,4 +19,5 @@ end
 
 def main()
     print('Hello world!')
+    x = -6
 end

@@ -1,6 +1,8 @@
 def add(a, b)
     print("Adding")
     return a + b
+end
 
 def main()
     print(foo(5, 1))
+end

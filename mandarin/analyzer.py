@@ -568,7 +568,7 @@ class Analyzer(object):
             
     def parse_expression(self, node):
         assert isinstance(node, lark.tree.Tree)
-        if node.data == 'expression':
+        if node.data == 'expression' or node.data == 'expression_nl':
             assert len(node.children) == 1
             return self.parse_expression(node.children[0])
         if node.data.endswith('atomic_expression'):
@@ -597,7 +597,7 @@ class Analyzer(object):
         elif node.data == 'symbol':
             # [2]
             return self.get_variable(node.children[0])
-        elif node.data == 'expression':
+        elif node.data.startswith('expression'):
             # [3]
             return self.parse_expression(node)
         elif node.data == 'function_call':

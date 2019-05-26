@@ -37,9 +37,11 @@ native_function_declaration: KW_DEF KW_NATIVE IDENTIFIER "(" typed_arglist ")"
 
 function_definition: KW_DEF IDENTIFIER "(" typed_arglist ")" _NL code_block_end
 
-typed_arglist: (typed_arg ("," typed_arg)* ","?)?
+typed_arglist: (_NL* typed_arg_nl (_NL* "," _NL* typed_arg_nl)* _NL* ("," _NL*)?)? _NL*
 
 typed_arg: typename? IDENTIFIER
+
+typed_arg_nl: (typename _NL*)? IDENTIFIER
 
 code_block_end: (code_statement | _NL)* KW_END
 
@@ -88,10 +90,11 @@ return_statement: KW_RETURN expression
 // Expression
 
 expression: g__binop_toplevel
+expression_nl: g__binop_toplevel_nl
 
 front_atomic_expression: unop* atomic_expression
 
-?atomic_expression: literal | symbol | "(" expression ")" | function_call | property
+?atomic_expression: literal | symbol | "(" expression_nl ")" | function_call | property
 
 // CAN'T THAT FUCKING LALR PARSE THIS SIMPLE THING?
 // OR IS LARK'S IMPLEMENTATION ~~FUCKINGLY~~ TOTALLY FLAWED?
@@ -105,7 +108,7 @@ function_call: atomic_expression call_operator
 
 literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
 
-call_operator: "(" (expression ("," expression)*)? ")"
+call_operator: "(" _NL* (expression_nl ("," expression_nl)* _NL*)?")"
 
 
 KW_DEF:    /\bdef\b/
@@ -164,5 +167,5 @@ _NL: "\r\n" | "\n"
 WS: /[ \t]+/
 %ignore WS
 
-COMMENT: /[#][^\n]*/ _NL
+COMMENT: /[#][^\n]*/
 %ignore COMMENT
