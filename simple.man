@@ -1,5 +1,7 @@
 class Vector
     def new(x, y)
+        # This is a demo
+
         self.x = x
         self.y = y
     end

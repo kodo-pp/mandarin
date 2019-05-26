@@ -41,7 +41,7 @@ typed_arglist: (typed_arg ("," typed_arg)* ","?)?
 
 typed_arg: typename? IDENTIFIER
 
-code_block_end: code_statement* KW_END
+code_block_end: (code_statement | _NL)* KW_END
 
 ?code_statement: (expression
     | var_declaration
@@ -66,9 +66,9 @@ typename: IDENTIFIER
 
 if_statement: KW_IF expression _NL (code_block_elif expression _NL)* (code_block_else _NL)? code_block_end
 
-code_block_elif: code_statement* KW_ELIF
+code_block_elif: (code_statement | _NL)* KW_ELIF
 
-code_block_else: code_statement* KW_ELSE
+code_block_else: (code_statement | _NL)* KW_ELSE
 
 
 // For statement
