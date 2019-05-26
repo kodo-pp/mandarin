@@ -138,24 +138,6 @@ assignment_op: strict_assignment_op
 
 strict_assignment_op: C_EQUAL
 
-binop: C_STAR
-    | C_SLASH
-    | C_PERCENT
-    | C_SLASH C_SLASH
-    | C_PLUS
-    | C_MINUS
-    | C_DOT C_DOT C_DOT
-    | C_DOT C_DOT
-    | C_EQUAL C_EQUAL
-    | C_LESS C_EQUAL
-    | C_GREATER C_EQUAL
-    | C_BANG C_EQUAL
-    | C_LESS
-    | C_GREATER
-    | C_AMP C_AMP
-    | C_PIPE C_PIPE
-    | C_PLUS C_PLUS
-
 unop: C_MINUS
     | C_PLUS
     | C_BANG
