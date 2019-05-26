@@ -74,6 +74,10 @@ def test_012():
     _test_parses('./old_tests/parser/012-classes.man')
 
 
+def test_013():
+    _test_parses('./old_tests/parser/013-many-operators.man')
+
+
 
 def test_inv_001():
     _test_parses('./old_tests/parser/invalid/001-func-without-end.man', expect=False)

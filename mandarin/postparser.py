@@ -35,9 +35,15 @@ def make_op(terminals):
     return ''.join([t.value for t in terminals])
 
 def binop(x):
-    lhs = x[0]
     rhs = x[-1]
-    op = make_op(x[1:-1])
+    operand_index = len(x) - 2
+    while isinstance(x[operand_index], lark.lexer.Token):
+        operand_index -= 1
+    if operand_index == 0:
+        lhs = x[operand_index]
+    else:
+        lhs = binop(x[:(operand_index+1)])
+    op = make_op(x[operand_index+1:-1])
     op_line = x[1].line
     op_column = x[1].column
     node = BinaryOperatorNode(lhs=lhs, rhs=rhs, operator=op)
