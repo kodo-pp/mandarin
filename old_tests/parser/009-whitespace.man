@@ -11,9 +11,7 @@ def main(
 unindented = 1
     4 + 2 * (long_variable_name
         + another_long_variable_name)
-    x =- 6
-    print(5) #hi!
-end
+    x =- 6  # x = -6
 
 
 def native foo(
