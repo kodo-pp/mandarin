@@ -25,9 +25,10 @@ code: toplevel_statement*
 
 class_definition: KW_CLASS IDENTIFIER _NL class_block_end
 
-class_block_end: class_statement KW_END
+class_block_end: (class_statement | _NL)* KW_END
 
 ?class_statement: (function_definition
+    | native_function_declaration
     | var_declaration) _NL
 
 // Function

@@ -17,6 +17,7 @@
 
 import os
 import sys
+import traceback as tb
 
 from . import postparser
 from . import grammar
@@ -60,7 +61,9 @@ def main():
         print(defs)
     except Exception as e:
         print('Error: {}: {}'.format(e.__class__.__name__, str(e)), file=sys.stderr)
+        tb.print_exc()
         sys.exit(1)
+
 
 if __name__ == '__main__':
     main()

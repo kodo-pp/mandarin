@@ -1,11 +1,18 @@
-def foo(a, b)
-    return a + b
+class Vector
+    def new(x, y)
+    end
+
+    def native native_method(a, b, Int c)
+
+    def __multiply__(k)
+        return Vector(self.x * k, self.y * k)
+    end
+
+    var x
+    var y
 end
 
 
 def main()
-    Int a
-    Float b = 4
-    a = 5
-    2 = 4
+    print('Hello world!')
 end

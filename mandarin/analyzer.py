@@ -360,13 +360,68 @@ class Analyzer(object):
             if isinstance(node, lark.tree.Tree) \
                     and node.data in ['native_function_declaration', 'function_definition']:
                 yield self.parse_function_declaration(node)
+        for i in self.get_class_definitions():
+            for mdecl in i.method_decls:
+                yield mdecl
 
     def get_function_definitions(self):
         for node in self.ast.children:
             if isinstance(node, lark.tree.Tree) and node.data == 'function_definition':
                 yield self.parse_function_definition(node)
+        for i in self.get_class_definitions():
+            for mdef in i.method_defs:
+                yield mdef
+            
 
-    def parse_function_definition(self, node):
+    def get_class_definitions(self):
+        for node in self.ast.children:
+            if isinstance(node, lark.tree.Tree) and node.data == 'class_definition':
+                yield self.parse_class_definition(node)
+
+
+    def parse_class_definition(self, node):
+        # class_definition: (0) KW_CLASS (1) IDENTIFIER _NL (2) class_block_end
+        # class_block_end: class_statement* KW_END
+        assert isinstance(node, lark.tree.Tree)
+        assert node.data == 'class_definition'
+        assert len(node.children) == 3
+
+        class_name = node.children[1].value
+        
+        block = node.children[2]
+        assert isinstance(block, lark.tree.Tree)
+        assert block.data.startswith('class_block')
+        assert len(block.children) >= 1
+
+        members = []
+        mdecls = []
+        mdefs = []
+        for stmt_node in block.children[:-1]:
+            stmt = self.parse_class_statement(stmt_node, prefix=f'{class_name}.')
+            if isinstance(stmt, FunctionDeclaration):
+                mdecls.append(stmt)
+            elif isinstance(stmt, FunctionDefiniton):
+                mdefs.append(stmt)
+                mdecls.append(stmt.decl)
+            elif isinstance(stmt, VariableDeclaration):
+                members.append(stmt)
+            else:
+                assert False, f'Unknown class statement type: {type(stmt)}'
+
+        return ClassDefinition(name=class_name, members=members, method_decls=mdecls, method_defs=mdefs)
+
+    def parse_class_statement(self, node, prefix):
+        assert isinstance(node, lark.tree.Tree)
+        assert node.data in {'function_definition', 'native_function_declaration', 'var_declaration'}
+        if node.data == 'native_function_declaration':
+            return self.parse_function_declaration(node, prefix=prefix)
+        elif node.data == 'function_definition':
+            return self.parse_function_definition(node, prefix=prefix)
+        else:
+            # node.data == 'var_declaration'
+            return self.parse_var_declaration(node, prefix=prefix)
+
+    def parse_function_definition(self, node, *, prefix=''):
         # function_definition: (0) KW_DEF (1) IDENTIFIER "(" (2) typed_arglist ")" (x) _NL (3) code_block_end
         # typed_arglist: (typed_arg ("," typed_arg)* ","?)?
         # typed_arg: typename? IDENTIFIER
@@ -380,7 +435,7 @@ class Analyzer(object):
         code = node.children[3]
         body = self.parse_code_block(code)
         return_type = Typename('var') # STUB
-        decl = FunctionDeclaration(name=name, return_type=return_type, arguments=arguments)
+        decl = FunctionDeclaration(name=prefix+name, return_type=return_type, arguments=arguments)
         return FunctionDefiniton(decl=decl, body=body)
     
     def parse_code_block(self, cb_node):
@@ -432,7 +487,7 @@ class Analyzer(object):
 
         return FunctionReturn(self.parse_expression(statement.children[1]))
 
-    def parse_var_declaration(self, node):
+    def parse_var_declaration(self, node, *, prefix=''):
         # var_declaration: typename IDENTIFIER (strict_assignment_op expression)?
         assert isinstance(node, lark.tree.Tree)
         type = self.parse_typename(node.children[0])
@@ -441,7 +496,7 @@ class Analyzer(object):
         if len(node.children) > 2:
             assert len(node.children) == 4
             value = self.parse_expression(node.children[3])
-        return VariableDeclaration(type=type, name=name, init_value=value)
+        return VariableDeclaration(type=type, name=prefix+name, init_value=value)
             
     def parse_var_assignment(self, node):
         # var_assignment: front_atomic_expression assignment_op expression
@@ -594,7 +649,7 @@ class Analyzer(object):
     def get_variable(self, varname):
         return IdentifierExpression(varname, Typename('var', lvalue=True))
 
-    def parse_function_declaration(self, node):
+    def parse_function_declaration(self, node, *, prefix=''):
         # native_function_declaration: (0) KW_DEF (1) KW_NATIVE (2) IDENTIFIER "(" (3) typed_arglist ")"
         # typed_arglist: (typed_arg ("," typed_arg)* ","?)?
         # typed_arg: typename? IDENTIFIER
@@ -609,7 +664,7 @@ class Analyzer(object):
         arglist = node.children[3 if is_native else 2]
         arguments = list(self.parse_typed_arglist(arglist))
         return_type = Typename('var') # STUB
-        return FunctionDeclaration(name=name, return_type=return_type, arguments=arguments)
+        return FunctionDeclaration(name=prefix+name, return_type=return_type, arguments=arguments)
 
     def is_native(self, node):
         return isinstance(node.children[1], lark.lexer.Token) and node.children[1].type == 'KW_NATIVE'
