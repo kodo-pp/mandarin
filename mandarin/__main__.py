@@ -19,11 +19,17 @@ import os
 import sys
 import traceback as tb
 
-from . import postparser
-from . import grammar
 from . import analyzer
+from . import generator
+from . import grammar
+from . import postparser
+from . import targets
 
 from lark import Lark
+
+
+class UsageError(Exception):
+    pass
 
 
 def run_parser(code):
@@ -40,17 +46,17 @@ def run_parser(code):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print('Usage: mandarin <file>')
+    if len(sys.argv) != 3:
+        print('Usage: mandarin <file> <output_file>')
         sys.exit(1)
 
     try:
         source_filename = sys.argv[1]
+        output_filename = sys.argv[2]
         with open(source_filename) as f:
             code = f.read()
 
         ast = run_parser(code)
-        #print(ast.pretty())
         an = analyzer.Analyzer(ast)
         decls = list(an.get_function_declarations())
         defs = list(an.get_function_definitions())
@@ -59,6 +65,21 @@ def main():
         print()
         print('-- FUNCTION DEFINITIONS --')
         print(defs)
+
+        # STUB
+        options = {'is_standalone': True, 'target': 'cxx'}
+        try:
+            target = targets.select(options['target'])
+        except KeyError as e:
+            raise UsageError('No such target: {}'.format(options['target'])) from e
+        gen = target.GeneratorType(analyzer=an, options=options)
+        
+        generated_code = gen.generate()
+        if output_filename == '-':
+            print(generated_code)
+        else:
+            with open(output_filename, 'w') as f:
+                f.write(generated_code)
     except Exception as e:
         print('Error: {}: {}'.format(e.__class__.__name__, str(e)), file=sys.stderr)
         tb.print_exc()
