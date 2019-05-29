@@ -84,7 +84,33 @@ class Generator(object):
         return []
 
 
+class Indenter(object):
+    def __init__(self, indent_string):
+        self.indent_string = indent_string
+        self.nest = 0
+
+    def __enter__(self):
+        self.nest += 1
+        return self
+
+    def __exit__(self, *args):
+        self.nest -= 1
+
+    def get_indentation(self):
+        return self.indent_string * self.nest
+
+    def indent(self, buf):
+        code = ''.join(buf)
+        lines = code.split('\n')
+        indented_lines = [self.get_indentation() + line for line in lines]
+        return '\n'.join(indented_lines)
+
+
 class CxxGenerator(Generator):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.indenter = Indenter(' ' * 4)
+
     # STUB!
     def generate_prologue(self):
         return [
@@ -101,19 +127,69 @@ class CxxGenerator(Generator):
             '}} /* namespace mandarin::user */\n',
         ]
         standalone_epilogue = [
-            'int main(int argc, char** argv)\n',
-            '{\n'
-            '    mandarin::support::preinit()\n',
+            'int main(int argc, char** argv) {\n',
+            '    mandarin::support::preinit();\n',
             '    mandarin::support::store_args(argc, argv);\n',
             '    auto scoped_init = mandarin::support::init();\n',
             '    mandarin::user::main();\n',
-            '    return 0;\n'
-            '}\n'
+            '    return 0;\n',
+            '}\n',
         ] if self.options['is_standalone'] else []
         return common_epilogue + standalone_epilogue
 
     def generate_class_declarations(self, class_defs, function_decls, function_defs):
-        return []
+        buf = []
+        for cd in class_defs:
+            buf += self.generate_class_declaration(cd)
+        return buf
+
+    def generate_class_declaration(self, cd):
+        name = cd.name
+        outer_buf = []
+        outer_buf.append('class {} : public mandarin::support::Shared {{\n'.format(name))
+        outer_buf.append('public:\n')
+        buf = []
+        for md in cd.method_decls:
+            buf += self.generate_method_declaration(md, cd)
+        outer_buf += buf
+        outer_buf.append('};\n')
+        return outer_buf
+
+    def generate_method_declaration(self, md, cd):
+        method_name = md.name
+        has_typename, canonical_method_name = self.canonicalize_method_name(method_name, cd)
+        buf = []
+        if has_typename:
+            return_type = md.return_type
+            canonical_return_type = self.canonicalize_type(return_type)
+            buf.append(f'    virtual {canonical_return_type} mndr_{canonical_method_name}(')
+        else:
+            buf.append(f'    virtual void mndr_{canonical_method_name}(')
+        buf += self.generate_function_arguments(md)
+        buf.append(f');\n');
+        return buf
+
+    def canonicalize_method_name(self, method_name, cd):
+        raw_name = method_name.split('.')[-1]
+        if raw_name == 'new':
+            return False, 'new'
+        elif raw_name == 'del':
+            return False, 'del'
+        else:
+            return True, raw_name
+
+    def canonicalize_type(self, typename):
+        if typename.name == 'var':
+            return 'mandarin::support::SharedDynamicObject'
+        else:
+            return 'mandarin::user::' + typename.name
+
+    def generate_function_arguments(self, md):
+        argument_strings = [
+            f'{self.canonicalize_type(arg.type)} {arg.name}'
+            for arg in md.arguments
+        ]
+        return [', '.join(argument_strings)]
 
     def generate_function_declarations(self, class_defs, function_decls, function_defs):
         return []
