@@ -673,7 +673,7 @@ class Analyzer(object):
     def parse_typed_arglist(self, arglist):
         assert isinstance(arglist, lark.tree.Tree)
         for argnode in arglist.children:
-            if isinstance(argnode, lark.tree.Tree) and argnode.data == 'typed_arg':
+            if isinstance(argnode, lark.tree.Tree) and argnode.data.startswith('typed_arg'):
                 if len(argnode.children) == 1:
                     # no typename
                     name, type = argnode.children[-1].value, Typename('var')
