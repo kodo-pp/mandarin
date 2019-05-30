@@ -60,11 +60,11 @@ def main():
         an = analyzer.Analyzer(ast)
         decls = list(an.get_function_declarations())
         defs = list(an.get_function_definitions())
-        print('-- FUNCTION DECLARATIONS --')
-        print(decls)
-        print()
-        print('-- FUNCTION DEFINITIONS --')
-        print(defs)
+        #print('-- FUNCTION DECLARATIONS --')
+        #print(decls)
+        #print()
+        #print('-- FUNCTION DEFINITIONS --')
+        #print(defs)
 
         # STUB
         options = {'is_standalone': True, 'target': 'cxx'}

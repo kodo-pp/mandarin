@@ -28,9 +28,9 @@ class Generator(object):
 
     def generate(self):
         buf = []
-        class_defs     = self.analyzer.get_class_definitions()
-        function_decls = self.analyzer.get_function_declarations()
-        function_defs  = self.analyzer.get_function_definitions()
+        class_defs     = list(self.analyzer.get_class_definitions())
+        function_decls = list(self.analyzer.get_function_declarations())
+        function_defs  = list(self.analyzer.get_function_definitions())
 
         buf += self.generate_prologue()
         buf += self.generate_visual_separator()
@@ -153,13 +153,13 @@ class CxxGenerator(Generator):
         ] if self.options['is_standalone'] else []
         return common_epilogue + standalone_epilogue
 
-    def generate_class_declarations(self, class_defs, function_decls, function_defs):
+    def generate_class_definitions(self, class_defs, function_decls, function_defs):
         buf = []
         for cd in class_defs:
-            buf += self.generate_class_declaration(cd)
+            buf += self.generate_class_definition(cd)
         return buf
 
-    def generate_class_declaration(self, cd):
+    def generate_class_definition(self, cd):
         name = cd.name
         outer_buf = []
         outer_buf.append('class mndr_{} : public mandarin::support::Shared {{\n'.format(name))
@@ -228,8 +228,8 @@ class CxxGenerator(Generator):
         buf.append(');\n');
         return buf
 
-    def generate_class_definitions(self, class_defs, function_decls, function_defs):
-        return []
+    def generate_class_declarations(self, class_defs, function_decls, function_defs):
+        return [f'class mndr_{cd.name};\n' for cd in class_defs]
 
     def generate_function_definitions(self, class_defs, function_decls, function_defs):
         return []
