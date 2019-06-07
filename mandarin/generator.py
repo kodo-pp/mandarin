@@ -24,13 +24,17 @@ from . import targets
 class Generator(object):
     def __init__(self, analyzer, options):
         self.analyzer = analyzer
+        self.class_defs     = list(self.analyzer.get_class_definitions())
+        self.function_decls = list(self.analyzer.get_function_declarations())
+        self.function_defs  = list(self.analyzer.get_function_definitions())
         self.options = options
 
     def generate(self):
         buf = []
-        class_defs     = list(self.analyzer.get_class_definitions())
-        function_decls = list(self.analyzer.get_function_declarations())
-        function_defs  = list(self.analyzer.get_function_definitions())
+
+        class_defs     = self.class_defs
+        function_decls = self.function_decls
+        function_defs  = self.function_defs
 
         buf += self.generate_prologue()
         buf += self.generate_visual_separator()
@@ -116,7 +120,7 @@ class Indenter(object):
     def indent(self, buf):
         code = ''.join(buf)
         lines = code.split('\n')
-        indented_lines = [self.get_indentation() + line for line in lines]
+        indented_lines = [(self.get_indentation() if len(line) > 0 else '') + line for line in lines]
         return '\n'.join(indented_lines)
 
 
@@ -232,7 +236,26 @@ class CxxGenerator(Generator):
         return [f'class mndr_{cd.name};\n' for cd in class_defs]
 
     def generate_function_definitions(self, class_defs, function_decls, function_defs):
-        return []
+        return sum(
+            [self.generate_function_definition(fd,) for fd in function_defs],
+            [],
+        )
+
+    def generate_function_definition(self, fd):
+        function_name = fd.decl.name
+        buf = []
+        return_type = fd.decl.return_type
+        canonical_return_type = self.canonicalize_type(return_type)
+        buf.append(f'{canonical_return_type} mndr_{function_name}(')
+        buf += self.generate_function_arguments(fd.decl)
+        buf.append(') {\n');
+        buf += self.generate_code_block(fd.body)
+        buf.append('}\n');
+        return buf
+
+    def generate_code_block(self, block):
+        with self.indenter:
+            return self.indenter.indent(['/* code */\n'])
 
 
 targets.targets.append(targets.Target(
