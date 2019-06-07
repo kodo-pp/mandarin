@@ -105,17 +105,9 @@ class Generator(object):
 class Indenter(object):
     def __init__(self, indent_string):
         self.indent_string = indent_string
-        self.nest = 0
-
-    def __enter__(self):
-        self.nest += 1
-        return self
-
-    def __exit__(self, *args):
-        self.nest -= 1
 
     def get_indentation(self):
-        return self.indent_string * self.nest
+        return self.indent_string
 
     def indent(self, buf):
         code = ''.join(buf)
@@ -124,10 +116,112 @@ class Indenter(object):
         return '\n'.join(indented_lines)
 
 
+class Context(object):
+    class VariableAlreadyExists(Exception):
+        def __init__(self, name):
+            self.name = name
+
+        def __str__(self):
+            return f'Variable `{self.name}` already exists'
+
+    class Frame(object):
+        __slots__ = ['variables']
+
+        def __init__(self):
+            self.variables = {}
+
+        def maybe_add_variable(self, name, var):
+            if self.has_variable(name):
+                return False
+            self.variables[name] = var
+            return True
+
+        def has_variable(self, name):
+            return self.maybe_get_variable(name) is not None
+
+        def add_variable(self, name, var):
+            if not self.maybe_add_variable(name, var):
+                raise Context.VariableAlreadyExists(name)
+
+        def maybe_get_variable(self, name):
+            return self.variables.get(name, None)
+
+        def get_variable(self, name):
+            maybe_var = self.maybe_get_variable(name)
+            if maybe_var is None:
+                raise KeyError(name)
+            return maybe_var
+
+
+    class PushHolder(object):
+        __slots__ = ['parent']
+
+        def __init__(self, parent):
+            self.parent = parent
+
+        def __enter__(self):
+            self.parent.raw_push()
+        
+        def __exit__(self, *args):
+            self.parent.raw_pop()
+
+
+    class StackEmptyError(Exception):
+        def __init__(self):
+            super().__init__()
+
+        def __str__(self):
+            return '`Context` object: stack is empty but a frame was requested'
+
+
+    __slots__ = ['function', 'stack']
+
+    def __init__(self):
+        self.function = None
+        self.stack = []
+
+    def maybe_add_variable(self, name, var):
+        if len(self.stack) == 0:
+            raise self.StackEmptyError()
+        return self.stack[-1].maybe_add_variable(name, var)
+
+    def add_variable(self, name, var):
+        if not self.maybe_add_variable(name, var):
+            raise Context.VariableAlreadyExists(name)
+
+    def maybe_get_variable(self, name):
+        for frame in reversed(self.stack):
+            maybe_var = frame.maybe_get_variable(name)
+            if maybe_var is not None:
+                return maybe_var
+        return None
+
+    def get_variable(self, name):
+        maybe_var = self.maybe_get_variable(name)
+        if maybe_var is None:
+            raise KeyError(name)
+        return maybe_var
+
+    def has_variable(self, name):
+        return self.maybe_get_variable(name) is not None
+
+    def raw_push(self):
+        self.stack.append(Context.Frame())
+
+    def raw_pop(self):
+        self.stack.pop()
+
+    def push(self):
+        return self.PushHolder(parent=self)
+
+
 class CxxGenerator(Generator):
+    __slots__ = ['indenter', 'context']
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.indenter = Indenter(' ' * 4)
+        self.context = Context()
 
     def generate_visual_separator(self):
         return ['\n']
@@ -254,8 +348,41 @@ class CxxGenerator(Generator):
         return buf
 
     def generate_code_block(self, block):
-        with self.indenter:
-            return self.indenter.indent(['/* code */\n'])
+        with self.context.push():
+            buf = []
+            for statement in block:
+                buf += self.generate_code_statement(statement)
+            return self.indenter.indent(buf)
+
+    def generate_code_statement(self, stmt):
+        methods = {
+            an.Expression:          self.generate_expression,
+            an.VariableAssignment:  self.generate_variable_assignment,
+            an.VariableDeclaration: self.generate_variable_declaration,
+        }
+
+        try:
+            method = methods[type(stmt)]
+        except KeyError:
+            return [f'/* Unimplemented (stub) statement type "{type(stmt)}" */\n']
+
+        return method(stmt)
+
+    def generate_expression(self, expr):
+        return ['/* Stub expression statement */\n']
+
+    def generate_variable_assignment(self, expr):
+        return ['/* Stub var-assignment statement */\n']
+
+    def generate_variable_declaration(self, expr):
+        name = expr.name
+        typename = self.canonicalize_type(expr.type)
+        try:
+            self.context.add_variable(name=expr.name, var=expr)
+        except Context.VariableAlreadyExists as e:
+            # TODO: Position
+            raise an.SemanticalError(f'Duplicate declaration of variable `{name}`') from e
+        return [f'{typename} mndr_{name};\n']
 
 
 targets.targets.append(targets.Target(

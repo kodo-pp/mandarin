@@ -256,8 +256,8 @@ class IntegerExpression(LiteralExpression):
 
 
 class VariableAssignment(object):
-    def __init__(self, varspec, operator, expr):
-        self.varspec = varspec
+    def __init__(self, name, operator, expr):
+        self.name = name
         self.operator = operator
         self.expr = expr
 
@@ -266,7 +266,7 @@ class VariableAssignment(object):
     
     def __repr__(self):
         return 'VarAssignment(var: {}, op: {}, expr: {})'.format(
-            repr(self.varspec),
+            repr(self.name),
             repr(self.operator),
             repr(self.expr),
         )
@@ -503,13 +503,13 @@ class Analyzer(object):
         # var_assignment: front_atomic_expression assignment_op expression
         assert isinstance(node, lark.tree.Tree)
         assert len(node.children) == 3
-        varspec = self.parse_expression(node.children[0])
+        name = self.parse_expression(node.children[0])
         operator = self.parse_operator(node.children[1])
         expr = self.parse_expression(node.children[2])
-        if not varspec.get_type().lvalue:
+        if not name.get_type().lvalue:
             # TODO: file, line & column position
             raise SemanticalError('At variable assignment: left-hand side is not a lvalue')
-        return VariableAssignment(varspec=varspec, operator=operator, expr=expr)
+        return VariableAssignment(name=name, operator=operator, expr=expr)
 
     def parse_operator(self, node):
         assert isinstance(node, lark.tree.Tree)

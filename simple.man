@@ -1,23 +1,4 @@
-class Vector
-    def new(x, y)
-        # This is a demo
-
-        self.x = x
-        self.y = y
-    end
-
-    def native native_method(a, b, Int c)
-
-    def __multiply__(k)
-        return Vector(self.x * k, self.y * k)
-    end
-
-    var x
-    var y
-end
-
-
 def main()
+    Int x
     print('Hello world!')
-    x = -6
 end
