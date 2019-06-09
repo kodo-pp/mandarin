@@ -1,3 +1,0 @@
-'I am a string'
-# I am a comment
-"I am not"      # But I am
