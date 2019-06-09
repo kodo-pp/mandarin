@@ -15,11 +15,15 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+from . import exceptions as exc
+from . import posinfo as pi
+
 import lark
 
 
-class SemanticalError(Exception):
-    pass
+class Node(object):
+    def __init__(self, posinfo):
+        self.posinfo = posinfo
 
 
 class Typename(object):
@@ -34,8 +38,9 @@ class Typename(object):
         return 'Typename({}{})'.format('Lvalue ' if self.lvalue else '', self.name)
 
 
-class FunctionArgument(object):
-    def __init__(self, name, type):
+class FunctionArgument(Node):
+    def __init__(self, posinfo, name, type):
+        super().__init__(posinfo)
         self.name = name
         self.type = type
 
@@ -43,8 +48,9 @@ class FunctionArgument(object):
         return 'FunctionArgument(name: {}, type: {})'.format(self.name, self.type)
 
 
-class FunctionDeclaration(object):
-    def __init__(self, name, return_type, arguments):
+class FunctionDeclaration(Node):
+    def __init__(self, posinfo, name, return_type, arguments):
+        super().__init__(posinfo)
         self.name = name
         self.return_type = return_type
         self.arguments = arguments
@@ -60,8 +66,9 @@ class FunctionDeclaration(object):
         )
 
 
-class ClassDefinition(object):
-    def __init__(self, name, members, method_decls, method_defs):
+class ClassDefinition(Node):
+    def __init__(self, posinfo, name, members, method_decls, method_defs):
+        super().__init__(posinfo)
         self.name = name
         self.members = members
         self.method_decls = method_decls
@@ -79,8 +86,9 @@ class ClassDefinition(object):
         )
 
 
-class FunctionDefiniton(object):
-    def __init__(self, decl, body):
+class FunctionDefiniton(Node):
+    def __init__(self, posinfo, decl, body):
+        super().__init__(posinfo)
         self.decl = decl
         self.body = body
 
@@ -91,7 +99,7 @@ class FunctionDefiniton(object):
         return 'FunctionDefiniton(decl: {}, body: {})'.format(repr(self.decl), repr(self.body))
 
 
-class Expression(object):
+class Expression(Node):
     def __str__(self):
         return repr(self)
 
@@ -103,7 +111,8 @@ class Expression(object):
 
 
 class StubExpression(Expression):
-    def __init__(self, node):
+    def __init__(self, posinfo, node):
+        super().__init__(posinfo)
         self.node = node
 
     def __str__(self):
@@ -117,7 +126,8 @@ class StubExpression(Expression):
 
 
 class IdentifierExpression(Expression):
-    def __init__(self, name, typename):
+    def __init__(self, posinfo, name, typename):
+        super().__init__(posinfo)
         self.name = name
         self.typename = typename
 
@@ -154,7 +164,8 @@ def deduce_type_property(objt, prop):
 
 
 class BinaryOperatorExpression(Expression):
-    def __init__(self, op, lhs, rhs):
+    def __init__(self, posinfo, op, lhs, rhs):
+        super().__init__(posinfo)
         self.op = op
         self.lhs = lhs
         self.rhs = rhs
@@ -175,7 +186,8 @@ class BinaryOperatorExpression(Expression):
 
 
 class UnaryOperatorExpression(Expression):
-    def __init__(self, op, arg):
+    def __init__(self, posinfo, op, arg):
+        super().__init__(posinfo)
         self.op = op
         self.arg = arg
 
@@ -193,7 +205,8 @@ class UnaryOperatorExpression(Expression):
 
 
 class PropertyExpression(Expression):
-    def __init__(self, obj, prop):
+    def __init__(self, posinfo, obj, prop):
+        super().__init__(posinfo)
         self.obj = obj
         self.prop = prop
 
@@ -211,7 +224,8 @@ class PropertyExpression(Expression):
 
 
 class FunctionCallExpression(Expression):
-    def __init__(self, func, args):
+    def __init__(self, posinfo, func, args):
+        super().__init__(posinfo)
         self.func = func
         self.args = args
 
@@ -228,7 +242,8 @@ class FunctionCallExpression(Expression):
 
 
 class LiteralExpression(Expression):
-    def __init__(self, value):
+    def __init__(self, posinfo, value):
+        super().__init__(posinfo)
         self.value = value
 
     def __repr__(self):
@@ -255,8 +270,9 @@ class IntegerExpression(LiteralExpression):
     name = 'int'
 
 
-class VariableAssignment(object):
-    def __init__(self, name, operator, expr):
+class VariableAssignment(Node):
+    def __init__(self, posinfo, name, operator, expr):
+        super().__init__(posinfo)
         self.name = name
         self.operator = operator
         self.expr = expr
@@ -272,8 +288,9 @@ class VariableAssignment(object):
         )
         
 
-class VariableDeclaration(object):
-    def __init__(self, type, name, init_value=None):
+class VariableDeclaration(Node):
+    def __init__(self, posinfo, type, name, init_value=None):
+        super().__init__(posinfo)
         self.type = type
         self.name = name
         self.init_value = init_value
@@ -289,8 +306,9 @@ class VariableDeclaration(object):
         )
 
 
-class WhileLoop(object):
-    def __init__(self, condition, body):
+class WhileLoop(Node):
+    def __init__(self, posinfo, condition, body):
+        super().__init__(posinfo)
         self.condition = condition
         self.body = body
 
@@ -304,8 +322,9 @@ class WhileLoop(object):
         )
 
 
-class ForLoop(object):
-    def __init__(self, variable, expression, body):
+class ForLoop(Node):
+    def __init__(self, posinfo, variable, expression, body):
+        super().__init__(posinfo)
         self.variable = variable
         self.expression = expression
         self.body = body
@@ -321,8 +340,9 @@ class ForLoop(object):
         )
 
 
-class IfStatement(object):
-    def __init__(self, condition, true_branch, false_branch, alternatives):
+class IfStatement(Node):
+    def __init__(self, posinfo, condition, true_branch, false_branch, alternatives):
+        super().__init__(posinfo)
         self.condition = condition
         self.true_branch = true_branch
         self.false_branch = false_branch
@@ -341,8 +361,9 @@ class IfStatement(object):
         )
 
 
-class FunctionReturn(object):
-    def __init__(self, expr):
+class FunctionReturn(Node):
+    def __init__(self, posinfo, expr):
+        super().__init__(posinfo)
         self.expr = expr
 
     def __str__(self):
@@ -353,8 +374,9 @@ class FunctionReturn(object):
 
 
 class Analyzer(object):
-    def __init__(self, ast):
+    def __init__(self, ast, filename=None):
         self.ast = ast
+        self.filename = filename
 
     def get_function_declarations(self):
         for node in self.ast.children:
@@ -409,7 +431,13 @@ class Analyzer(object):
             else:
                 assert False, f'Unknown class statement type: {type(stmt)}'
 
-        return ClassDefinition(name=class_name, members=members, method_decls=mdecls, method_defs=mdefs)
+        return ClassDefinition(
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            name = class_name,
+            members = members,
+            method_decls = mdecls,
+            method_defs = mdefs,
+        )
 
     def parse_class_statement(self, node, prefix):
         assert isinstance(node, lark.tree.Tree)
@@ -436,8 +464,15 @@ class Analyzer(object):
         code = node.children[3]
         body = self.parse_code_block(code)
         return_type = Typename('var') # STUB
-        decl = FunctionDeclaration(name=prefix+name, return_type=return_type, arguments=arguments)
-        return FunctionDefiniton(decl=decl, body=body)
+
+        posinfo = pi.from_lark(filename=self.filename, node=node)
+        decl = FunctionDeclaration(
+            posinfo = posinfo,
+            name = prefix+name,
+            return_type = return_type,
+            arguments = arguments,
+        )
+        return FunctionDefiniton(posinfo=posinfo, decl=decl, body=body)
     
     def parse_code_block(self, cb_node):
         # code_block_<***>: code_statement* KW_<***>
@@ -486,7 +521,10 @@ class Analyzer(object):
         assert isinstance(statement, lark.tree.Tree)
         assert len(statement.children) == 2
 
-        return FunctionReturn(self.parse_expression(statement.children[1]))
+        return FunctionReturn(
+            posinfo = pi.from_lark(filename=self.filename, node=statement),
+            expr = self.parse_expression(statement.children[1]),
+        )
 
     def parse_var_declaration(self, node, *, prefix=''):
         # var_declaration: typename IDENTIFIER (strict_assignment_op expression)?
@@ -497,7 +535,12 @@ class Analyzer(object):
         if len(node.children) > 2:
             assert len(node.children) == 4
             value = self.parse_expression(node.children[3])
-        return VariableDeclaration(type=type, name=prefix+name, init_value=value)
+        return VariableDeclaration(
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            type = type,
+            name = prefix + name,
+            init_value = value,
+        )
             
     def parse_var_assignment(self, node):
         # var_assignment: front_atomic_expression assignment_op expression
@@ -507,9 +550,16 @@ class Analyzer(object):
         operator = self.parse_operator(node.children[1])
         expr = self.parse_expression(node.children[2])
         if not name.get_type().lvalue:
-            # TODO: file, line & column position
-            raise SemanticalError('At variable assignment: left-hand side is not a lvalue')
-        return VariableAssignment(name=name, operator=operator, expr=expr)
+            line = node.children[0].line
+            column = node.children[0].column
+            posinfo = Posinfo(filename=self.filename, line=line, column=column)
+            raise exc.TypeMismatchError('At variable assignment: left-hand side is not a lvalue', posinfo)
+        return VariableAssignment(
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            name = name,
+            operator = operator,
+            expr = expr,
+        )
 
     def parse_operator(self, node):
         assert isinstance(node, lark.tree.Tree)
@@ -543,10 +593,11 @@ class Analyzer(object):
             assert i + 3 == len(nodes)
         
         return IfStatement(
-            condition=main_condition,
-            true_branch=true_branch,
-            false_branch=false_branch,
-            alternatives=alternatives,
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            condition = main_condition,
+            true_branch = true_branch,
+            false_branch = false_branch,
+            alternatives = alternatives,
         )
 
     def parse_for_statement(self, node):
@@ -556,7 +607,12 @@ class Analyzer(object):
         var = node.children[1].value
         expr = self.parse_expression(node.children[3])
         cb = self.parse_code_block(node.children[4])
-        return ForLoop(variable=var, expression=expr, body=cb)
+        return ForLoop(
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            variable = var,
+            expression = expr,
+            body = cb,
+        )
             
     def parse_while_statement(self, node):
         # while_statement: KW_WHILE expression _NL code_block_end
@@ -564,7 +620,11 @@ class Analyzer(object):
         assert len(node.children) == 3
         expr = node.children[1]
         cb = node.children[2]
-        return WhileLoop(condition=expr, body=cb)
+        return WhileLoop(
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            condition = expr,
+            body = cb,
+        )
             
     def parse_expression(self, node):
         assert isinstance(node, lark.tree.Tree)
@@ -577,7 +637,12 @@ class Analyzer(object):
         op = node.op
         lhs = self.parse_expression(node.lhs)
         rhs = self.parse_expression(node.rhs)
-        return BinaryOperatorExpression(op=op, lhs=lhs, rhs=rhs)
+        return BinaryOperatorExpression(
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            op = op,
+            lhs = lhs,
+            rhs = rhs,
+        )
 
     def parse_atomic_expression(self, node):
         # FIXME: loops on old_tests/parser/006-unary-operators.man
@@ -585,7 +650,11 @@ class Analyzer(object):
         assert node.data == 'front_atomic_expression'
         atom = self.parse_pure_atomic_expression(node.children[-1])
         for unop in node.children[::-1][1:]:
-            atom = UnaryOperatorExpression(op=self.parse_operator(unop), arg=atom)
+            atom = UnaryOperatorExpression(
+                posinfo = pi.from_lark(filename=self.filename, node=unop),
+                op = self.parse_operator(unop),
+                arg = atom,
+            )
         return atom
 
     def parse_pure_atomic_expression(self, node):
@@ -612,7 +681,11 @@ class Analyzer(object):
         assert len(node.children) == 3
         obj = self.parse_pure_atomic_expression(node.children[0])
         prop = node.children[2].value
-        return PropertyExpression(obj=obj, prop=prop)
+        return PropertyExpression(
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            obj = obj,
+            prop = prop,
+        )
 
     def parse_literal(self, node):
         # literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
@@ -622,9 +695,15 @@ class Analyzer(object):
         lit = node.children[0]
         if lit.type == 'NUMBER':
             # TODO: floats
-            return IntegerExpression(int(lit.value))
+            return IntegerExpression(
+                posinfo = pi.from_lark(filename=self.filename, node=node),
+                value = int(lit.value),
+            )
         elif lit.type in ['STRING_SINGLE', 'STRING_DOUBLE']:
-            return StringExpression(self.unescape_string(lit.value))
+            return StringExpression(
+                posinfo = pi.from_lark(filename=self.filename, node=node),
+                value = self.unescape_string(lit.value),
+            )
         else:
             assert False, 'Unknown literal type: {}'.format(lit.type)
 
@@ -639,7 +718,11 @@ class Analyzer(object):
         assert len(node.children) == 2
         functor = self.parse_pure_atomic_expression(node.children[0])
         args = self.parse_call_operator(node.children[1])
-        return FunctionCallExpression(func=functor, args=args)
+        return FunctionCallExpression(
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            func = functor,
+            args = args,
+        )
 
     def parse_call_operator(self, node):
         # call_operator: "(" (expression ("," expression)*)? ")"
@@ -647,8 +730,14 @@ class Analyzer(object):
         assert node.data == 'call_operator'
         return [self.parse_expression(x) for x in node.children]
 
-    def get_variable(self, varname):
-        return IdentifierExpression(varname, Typename('var', lvalue=True))
+    def get_variable(self, var_token):
+        assert isinstance(var_token, lark.lexer.Token)
+        assert var_token.type == 'IDENTIFIER'
+        return IdentifierExpression(
+            posinfo = pi.from_lark(filename=self.filename, node=var_token),
+            name = var_token.value,
+            typename = Typename('var', lvalue=True),
+        )
 
     def parse_function_declaration(self, node, *, prefix=''):
         # native_function_declaration: (0) KW_DEF (1) KW_NATIVE (2) IDENTIFIER "(" (3) typed_arglist ")"
@@ -665,7 +754,12 @@ class Analyzer(object):
         arglist = node.children[3 if is_native else 2]
         arguments = list(self.parse_typed_arglist(arglist))
         return_type = Typename('var') # STUB
-        return FunctionDeclaration(name=prefix+name, return_type=return_type, arguments=arguments)
+        return FunctionDeclaration(
+            posinfo = pi.from_lark(filename=self.filename, node=node),
+            name = prefix + name,
+            return_type = return_type,
+            arguments = arguments,
+        )
 
     def is_native(self, node):
         return isinstance(node.children[1], lark.lexer.Token) and node.children[1].type == 'KW_NATIVE'
@@ -680,7 +774,11 @@ class Analyzer(object):
                 else:
                     # with typename
                     name, type = argnode.children[-1].value, self.parse_typename(argnode.children[0])
-                yield FunctionArgument(name=name, type=type)
+                yield FunctionArgument(
+                    posinfo = pi.from_lark(filename=self.filename, node=argnode),
+                    name = name,
+                    type = type,
+                )
     
     def parse_typename(self, node):
         assert isinstance(node, lark.tree.Tree)

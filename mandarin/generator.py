@@ -18,6 +18,7 @@ import abc
 from typing import List
 
 from . import analyzer as an
+from . import exceptions as exc
 from . import targets
 
 
@@ -182,7 +183,7 @@ class Context(object):
 
     def maybe_add_variable(self, name, var):
         if len(self.stack) == 0:
-            raise self.StackEmptyError()
+            raise Context.StackEmptyError()
         return self.stack[-1].maybe_add_variable(name, var)
 
     def add_variable(self, name, var):
@@ -371,17 +372,16 @@ class CxxGenerator(Generator):
     def generate_expression(self, expr):
         return ['/* Stub expression statement */\n']
 
-    def generate_variable_assignment(self, expr):
+    def generate_variable_assignment(self, stmt):
         return ['/* Stub var-assignment statement */\n']
 
-    def generate_variable_declaration(self, expr):
-        name = expr.name
-        typename = self.canonicalize_type(expr.type)
+    def generate_variable_declaration(self, decl):
+        name = decl.name
+        typename = self.canonicalize_type(decl.type)
         try:
-            self.context.add_variable(name=expr.name, var=expr)
+            self.context.add_variable(name=decl.name, var=decl)
         except Context.VariableAlreadyExists as e:
-            # TODO: Position
-            raise an.SemanticalError(f'Duplicate declaration of variable `{name}`') from e
+            raise exc.DuplicateVariableDeclaration(posinfo=decl.posinfo, name=name) from e
         return [f'{typename} mndr_{name};\n']
 
 

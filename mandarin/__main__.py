@@ -24,12 +24,9 @@ from . import generator
 from . import grammar
 from . import postparser
 from . import targets
+from .exceptions import UsageError, MandarinError
 
 from lark import Lark
-
-
-class UsageError(Exception):
-    pass
 
 
 def run_parser(code):
@@ -37,12 +34,30 @@ def run_parser(code):
         grammar.GRAMMAR,
         start = 'code',
         parser = 'earley',
+        propagate_positions = True,
     )
     ast = parser.parse(code)
     pp = postparser.PostParser()
     ast = pp.transform(ast)
     
     return ast
+
+
+def print_compile_error(e, code):
+    print('Error: ' + str(e))
+    lines = code.split('\n')
+    n = len(lines)
+    lineno = e.posinfo.line
+    column_no = e.posinfo.column
+    line = lines[lineno-1]
+    prefix = '[{}:{:@}] |  '.replace('@', str(len(str(n)))).format(e.posinfo.filename, lineno)
+    print(prefix + line)
+    print(' ' * len(prefix) + '~' * (column_no - 1) + '^' + '~' * (len(line) - column_no))
+    print()
+
+    if os.getenv('MANDARIN_VERBOSE_ERRORS', '0') == '1':
+        print('Verbose errors enabled, displaying the traceback')
+        tb.print_exc()
 
 
 def main():
@@ -57,7 +72,7 @@ def main():
             code = f.read()
 
         ast = run_parser(code)
-        an = analyzer.Analyzer(ast)
+        an = analyzer.Analyzer(ast, filename=source_filename)
         decls = list(an.get_function_declarations())
         defs = list(an.get_function_definitions())
         #print('-- FUNCTION DECLARATIONS --')
@@ -80,8 +95,12 @@ def main():
         else:
             with open(output_filename, 'w') as f:
                 f.write(generated_code)
+    except MandarinError as e:
+        print_compile_error(e, code=code)
+        print('Build failed')
+        sys.exit(2)
     except Exception as e:
-        print('Error: {}: {}'.format(e.__class__.__name__, str(e)), file=sys.stderr)
+        print('Internal compiler error: {}: {}'.format(e.__class__.__name__, str(e)), file=sys.stderr)
         tb.print_exc()
         sys.exit(1)
 
