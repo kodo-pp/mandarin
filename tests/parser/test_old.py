@@ -4,14 +4,21 @@ import lark
 from mandarin.__main__ import run_parser
 from mandarin.analyzer import Analyzer
 
+# BEGIN import order is significant
+import mandarin.generator
+from mandarin.targets import targets
+# END import order is significant
+
 
 def _test_parses(filename, expect=True):
     def parses(code):
         ast = run_parser(code)
         an = Analyzer(ast)
-        list(an.get_function_declarations())
-        list(an.get_function_definitions())
-        list(an.get_class_definitions())
+        for target in targets:
+            options = {'is_standalone': True}
+            gen = target.GeneratorType(analyzer=an, options=options)
+            code = gen.generate()
+            # If it didn't raise, it probably works
         
     with open(filename) as f:
         code = f.read()
