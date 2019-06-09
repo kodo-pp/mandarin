@@ -24,36 +24,56 @@ from . import generator
 from . import grammar
 from . import postparser
 from . import targets
-from .exceptions import UsageError, MandarinError
+from . import posinfo as pi
+from .exceptions import UsageError, MandarinError, MandarinSyntaxError
 
 from lark import Lark
+from lark.exceptions import LarkError, UnexpectedToken, UnexpectedCharacters
 
 
-def run_parser(code):
-    parser = Lark(
-        grammar.GRAMMAR,
-        start = 'code',
-        parser = 'earley',
-        propagate_positions = True,
-    )
-    ast = parser.parse(code)
-    pp = postparser.PostParser()
-    ast = pp.transform(ast)
-    
-    return ast
+def run_parser(code, filename=None):
+    try:
+        parser = Lark(
+            grammar.GRAMMAR,
+            start = 'code',
+            parser = 'earley',
+            propagate_positions = True,
+        )
+        ast = parser.parse(code)
+        pp = postparser.PostParser()
+        ast = pp.transform(ast)
+        
+        return ast
+    except UnexpectedToken as e:
+        raise MandarinSyntaxError(
+            message = f'Unexpected token `{repr(e.token)}`',
+            posinfo = pi.from_lark(filename=filename, node=e),
+        ) from e
+    except UnexpectedCharacters as e:
+        raise MandarinSyntaxError(
+            message = f'Unexpected token',
+            posinfo = pi.from_lark(filename=filename, node=e),
+        ) from e
+    except LarkError as e:
+        raise MandarinSyntaxError(
+            message = str(e),
+            posinfo = pi.EofPosinfo(filename=filename),
+        ) from e
 
 
 def print_compile_error(e, code):
     print('Error: ' + str(e))
-    lines = code.split('\n')
-    n = len(lines)
-    lineno = e.posinfo.line
-    column_no = e.posinfo.column
-    line = lines[lineno-1]
-    prefix = '[{}:{:@}] |  '.replace('@', str(len(str(n)))).format(e.posinfo.filename, lineno)
-    print(prefix + line)
-    print(' ' * len(prefix) + '~' * (column_no - 1) + '^' + '~' * (len(line) - column_no))
-    print()
+    if not isinstance(e.posinfo, pi.EofPosinfo):
+        lines = code.split('\n')
+        n = len(lines)
+        lineno = e.posinfo.line
+        column_no = e.posinfo.column
+        line = lines[lineno-1]
+        prefix = '  [line {:@}] |  '.replace('@', str(len(str(n)))).format(lineno)
+        print(prefix + line)
+        end = ' (newline)' if column_no >= len(line) else ''
+        print(' ' * len(prefix) + '~' * (column_no - 1) + '^' + '~' * (len(line) - column_no) + end)
+        print()
 
     if os.getenv('MANDARIN_VERBOSE_ERRORS', '0') == '1':
         print('Verbose errors enabled, displaying the traceback')
@@ -71,7 +91,7 @@ def main():
         with open(source_filename) as f:
             code = f.read()
 
-        ast = run_parser(code)
+        ast = run_parser(code, filename=source_filename)
         an = analyzer.Analyzer(ast, filename=source_filename)
         decls = list(an.get_function_declarations())
         defs = list(an.get_function_definitions())

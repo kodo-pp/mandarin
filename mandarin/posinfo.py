@@ -29,7 +29,18 @@ class Posinfo(object):
         return f'{self.filename}, line {self.line}, column {self.column}'
 
 
+class EofPosinfo(Posinfo):
+    __slots__ = ['line', 'column', 'filename']
+
+    def __init__(self, filename):
+        super().__init__(None, None, filename)
+
+    def __str__(self):
+        return f'{self.filename}, end of file'
+
+
 def from_lark(filename, node):
     line = node.line
     column = node.column
     return Posinfo(filename=filename, line=line, column=column)
+

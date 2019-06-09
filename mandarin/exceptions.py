@@ -43,7 +43,7 @@ class CodeError(MandarinError):
         self.posinfo = posinfo
 
     def __str__(self):
-        return f'[at {str(self.posinfo)}]: {super().__str__()}'
+        return f'[at {str(self.posinfo)}]:\n  {super().__str__()}'
 
     description = 'Unknown error in code'
 
