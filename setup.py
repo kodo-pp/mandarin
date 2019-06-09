@@ -20,13 +20,14 @@ from setuptools import setup
 
 
 setup(
-    name            = 'mandarin',
-    version         = '0.0.0',
-    description     = 'A mixedly-typed compiled programming language',
-    author          = 'Alexander Korzun',
-    author_email    = 'korzun.sas@mail.ru',
-    license         = 'GPL',
-    packages        = ['mandarin'],
-    tests_require   = ['pytest'],
-    setup_requires  = ['pytest-runner'],
+    name                = 'mandarin',
+    version             = '0.0.0',
+    description         = 'A mixedly-typed compiled programming language',
+    author              = 'Alexander Korzun',
+    author_email        = 'korzun.sas@mail.ru',
+    license             = 'GPL',
+    packages            = ['mandarin'],
+    tests_require       = ['pytest'],
+    setup_requires      = ['pytest-runner'],
+    install_requires    = ['lark-parser'],
 )
