@@ -48,6 +48,14 @@ class CodeError(MandarinError):
     description = 'Unknown error in code'
 
 
+class InternalError(CodeError):
+    """ Internal error which occured while processing the code """
+    
+    def __init__(self, posinfo, message):
+        msg = f'{message}. This is a bug in compiler, not your program'
+        super().__init__(posinfo=posinfo, message=msg)
+
+
 class MandarinSyntaxError(CodeError):
     """ Represents syntax error in a source file """
     description = 'Syntax error'
@@ -65,9 +73,28 @@ class TypeMismatchError(SemanticalError):
 
 
 class DuplicateVariableDeclaration(SemanticalError):
-    def __init__(self, name, posinfo):
+    def __init__(self, posinfo, name):
         msg = f'Variable `{name}` is already declared'
         super().__init__(posinfo=posinfo, message=msg)
         self.name = name
 
     description = 'Duplicate variable declaration'
+
+
+class UndeclaredVariable(SemanticalError):
+    def __init__(self, posinfo, name):
+        msg = f'Variable `{name}` is not declared'
+        super().__init__(posinfo=posinfo, message=msg)
+        self.name = name
+
+    description = 'Undeclared variable'
+
+
+class InvalidDefaultConstructorUsed(SemanticalError):
+    def __init__(self, posinfo, varname, typename):
+        msg = f'Default constructor for variable `{varname}` of type `{typename}` is not defined'
+        super().__init__(posinfo=posinfo, message=msg)
+        self.varname = varname
+        self.typename = typename
+
+    description = 'Inexistent default constructor used'

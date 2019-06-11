@@ -356,24 +356,82 @@ class CxxGenerator(Generator):
             return self.indenter.indent(buf)
 
     def generate_code_statement(self, stmt):
-        methods = {
-            an.Expression:          self.generate_expression,
-            an.VariableAssignment:  self.generate_variable_assignment,
-            an.VariableDeclaration: self.generate_variable_declaration,
-        }
+        methods = [
+            (an.Expression,             lambda e: self.generate_expression(e) + [';\n']),
+            (an.VariableAssignment,     self.generate_variable_assignment),
+            (an.VariableDeclaration,    self.generate_variable_declaration),
+        ]
 
-        try:
-            method = methods[type(stmt)]
-        except KeyError:
-            return [f'/* Unimplemented (stub) statement type "{type(stmt)}" */\n']
-
-        return method(stmt)
+        for Type, method in methods:
+            if isinstance(stmt, Type):
+                return method(stmt)
+        #raise exc.InternalError(posinfo=stmt.posinfo, message=f'Unknown statement class: {Type.__name__}')
+        return [f'/* Unimplemented (stub) statement type "{type(stmt)}" */\n']
 
     def generate_expression(self, expr):
-        return ['/* Stub expression statement */\n']
+        methods = [
+            (an.BinaryOperatorExpression,   self.generate_binop_expression),
+            (an.FunctionCallExpression,     self.generate_function_call_expression),
+            (an.IdentifierExpression,       self.generate_identifier_expression),
+            (an.LiteralExpression,          self.generate_literal_expression),
+            (an.PropertyExpression,         self.generate_property_expression),
+            (an.UnaryOperatorExpression,    self.generate_unop_expression),
+        ]
+        for Type, method in methods:
+            if isinstance(expr, Type):
+                return method(expr)
+        raise exc.InternalError(posinfo=expr.posinfo, message=f'Unknown expression class: {Type.__name__}')
+
+    def generate_binop_expression(self, expr):
+        return ['/* Expression (stub) [binary operator] */']
+
+    def generate_function_call_expression(self, expr):
+        return ['/* Expression (stub) [function call] */']
+
+    def generate_identifier_expression(self, expr):
+        return ['/* Expression (stub) [identifier] */']
+
+    def generate_literal_expression(self, expr):
+        return ['/* Expression (stub) [literal] */']
+
+    def generate_property_expression(self, expr):
+        return ['/* Expression (stub) [property] */']
+
+    def generate_unop_expression(self, expr):
+        emulated, canon = self.canonicalize_unary_operator(expr.op)
+        if emulated:
+            return [f'mandarin::support::unop_{canon}({expr.arg})']
+        return [f'{canon}({"".join(self.generate_expression(expr.arg))})']
+
+    def canonicalize_unary_operator(self, op):
+        if op in ['+', '-', '!', '~']:
+            return False, op
+        assert False, f'Encountered unknown unary operator `op`'
 
     def generate_variable_assignment(self, stmt):
-        return ['/* Stub var-assignment statement */\n']
+        maybe_var = self.context.maybe_get_variable(stmt.name)
+        if maybe_var is None:
+            # Combined assignment + declaration with implicit type inference
+            # (like `x = 5` with no `x` declared earlier)
+            # No assignment operator but `=` is permitted
+            if stmt.operator != '=':
+                # All other operators make it assignment-only statement, not a combined decl+assign one
+                raise exc.UndeclaredVariable(posinfo=stmt.posinfo, name=stmt.name)
+            typename = self.canonicalize_type(stmt.expr.get_type())
+            self.context.add_variable(
+                name = stmt.name,
+                var = an.VariableDeclaration(
+                    posinfo = stmt.posinfo,
+                    name = stmt.name,
+                    type = typename,
+                    init_value = stmt.expr,
+                ),
+            )
+            return [f'{typename} mndr_{stmt.name} = {"".join(self.generate_expression(stmt.expr))};\n']
+        # XXX: STUB!
+        if stmt.operator != '=':
+            raise NotImplementedError('Assignment operators other than `=` are not yet implemented')
+        return [f'mndr_{stmt.name} = {"".join(self.generate_expression(stmt.expr))};\n']
 
     def generate_variable_declaration(self, decl):
         name = decl.name
@@ -382,7 +440,19 @@ class CxxGenerator(Generator):
             self.context.add_variable(name=decl.name, var=decl)
         except Context.VariableAlreadyExists as e:
             raise exc.DuplicateVariableDeclaration(posinfo=decl.posinfo, name=name) from e
-        return [f'{typename} mndr_{name};\n']
+        if decl.init_value is None:
+            if not self.is_default_constructible(decl.type):
+                raise exc.InvalidDefaultConstructorUsed(
+                    posinfo = decl.posinfo,
+                    varname = name,
+                    typename = decl.type,
+                )
+            return [f'{typename} mndr_{name};\n']
+        return [f'{typename} mndr_{name} = {"".join(self.generate_expression(decl.init_value))};\n']
+
+    def is_default_constructible(self, typename):
+        # XXX: STUB!
+        return True
 
 
 targets.targets.append(targets.Target(

@@ -1,6 +1,7 @@
 import pytest
 import lark
 
+import mandarin.exceptions as exc
 from mandarin.__main__ import run_parser
 from mandarin.analyzer import Analyzer
 
@@ -25,7 +26,7 @@ def _test_parses(filename, expect=True):
     if expect:
         parses(code)
     else:
-        with pytest.raises(lark.exceptions.LarkError):
+        with pytest.raises(exc.MandarinSyntaxError):
             parses(code)
             print('Something must be wrong')
             print('AST (dump): ' + repr(ast))

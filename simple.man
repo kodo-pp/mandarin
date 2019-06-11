@@ -1,5 +1,4 @@
 def main()
-    Int x
-    var x
+    Int x = -6
     print('Hello world!')
 end
