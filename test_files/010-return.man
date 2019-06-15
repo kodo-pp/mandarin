@@ -4,5 +4,5 @@ def add(a, b)
 end
 
 def main()
-    print(foo(5, 1))
+    print(add(5, 1))
 end

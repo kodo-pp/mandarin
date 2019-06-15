@@ -2,8 +2,9 @@ import pytest
 import lark
 
 import mandarin.exceptions as exc
-from mandarin.__main__ import run_parser
+from mandarin.__main__ import parse_file, find_librin, read_file
 from mandarin.analyzer import Analyzer
+from mandarin.format import Formatter
 
 # BEGIN import order is significant
 import mandarin.generator
@@ -13,11 +14,16 @@ from mandarin.targets import targets
 
 def _test_parses(filename, expect=True):
     def parses(code):
-        ast = run_parser(code)
-        an = Analyzer(ast)
+        an = parse_file(filename, code)
+        librin_filename = find_librin()
+        librin_code = read_file(librin_filename)
+        librin_an = parse_file(librin_filename, librin_code)
         for target in targets:
             options = {'is_standalone': True}
-            gen = target.GeneratorType(analyzer=an, options=options)
+            fmt = Formatter(filename=filename, code=code)
+            fmt.add_file(librin_filename, librin_code)
+            gen = target.GeneratorType(analyzer=an, options=options, formatter=fmt)
+            gen.import_analyzer(librin_an)
             code = gen.generate()
             # If it didn't raise, it probably works
         
