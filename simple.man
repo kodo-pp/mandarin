@@ -1,4 +1,4 @@
 def main()
-    Int x = -6
+    Int x = -2984923792763912764081923098273921608294731209386
     print('Hello world!')
 end

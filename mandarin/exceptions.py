@@ -15,6 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+from . import format as fmt
 from .posinfo import Posinfo
 
 
@@ -25,7 +26,8 @@ class MandarinError(Exception):
         super().__init__(message)
 
     def __str__(self):
-        return f'{self.description}: {super().__str__()}'
+        tab = fmt.formatter.get_colortab()
+        return f'{tab["desc"].format(self.description)}:\n    {super().__str__()}'
 
     description = 'Unknown error'
 
@@ -43,7 +45,7 @@ class CodeError(MandarinError):
         self.posinfo = posinfo
 
     def __str__(self):
-        return f'[at {str(self.posinfo)}]:\n  {super().__str__()}'
+        return f'[at {self.posinfo.format(color=True)}]:\n  {super().__str__()}'
 
     description = 'Unknown error in code'
 
@@ -98,3 +100,17 @@ class InvalidDefaultConstructorUsed(SemanticalError):
         self.typename = typename
 
     description = 'Inexistent default constructor used'
+
+
+class IntegerOutOfBounds(SemanticalError):
+    def __init__(self, posinfo, value):
+        msg = f'Integer {value} is either too large or too small for the native integer type'
+        super().__init__(posinfo=posinfo, message=msg)
+        self.value = value
+    
+    description = 'Literal value out of bounds'
+
+
+def warn(w):
+    # STUB!
+    fmt.formatter.print_compile_error(w, warning=True)

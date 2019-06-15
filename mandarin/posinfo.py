@@ -15,6 +15,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+from .format import formatter as fmt
+
+
 class Posinfo(object):
     """ Information about position in a source file """
 
@@ -26,6 +29,14 @@ class Posinfo(object):
         self.filename = filename
 
     def __str__(self):
+        return self.format(False)
+
+    def format(self, color=False):
+        if color:
+            tab = fmt.get_colortab()
+            name = lambda x: tab['filename'].format(x)
+            num  = lambda x: tab['number'].format(x)
+            return f'{name(self.filename)}, line {num(self.line)}, column {num(self.column)}'
         return f'{self.filename}, line {self.line}, column {self.column}'
 
 
@@ -35,8 +46,10 @@ class EofPosinfo(Posinfo):
     def __init__(self, filename):
         super().__init__(None, None, filename)
 
-    def __str__(self):
-        return f'{self.filename}, end of file'
+    def format(self, color=False):
+        if color:
+            return '{}, end of file'.format(fmt.get_colortab()['filename'].format(self.filename))
+        return '{}, end of file'.format(self.filename)
 
 
 def from_lark(filename, node):

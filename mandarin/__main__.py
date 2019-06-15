@@ -24,6 +24,7 @@ from . import generator
 from . import grammar
 from . import postparser
 from . import targets
+from . import format as fmt
 from . import posinfo as pi
 from .exceptions import UsageError, MandarinError, MandarinSyntaxError
 
@@ -61,25 +62,6 @@ def run_parser(code, filename=None):
         ) from e
 
 
-def print_compile_error(e, code):
-    print('Error: ' + str(e))
-    if not isinstance(e.posinfo, pi.EofPosinfo):
-        lines = code.split('\n')
-        n = len(lines)
-        lineno = e.posinfo.line
-        column_no = e.posinfo.column
-        line = lines[lineno-1]
-        prefix = '  [line {:@}] |  '.replace('@', str(len(str(n)))).format(lineno)
-        print(prefix + line)
-        end = ' (newline)' if column_no >= len(line) else ''
-        print(' ' * len(prefix) + '~' * (column_no - 1) + '^' + '~' * (len(line) - column_no) + end)
-        print()
-
-    if os.getenv('MANDARIN_VERBOSE_ERRORS', '0') == '1':
-        print('Verbose errors enabled, displaying the traceback')
-        tb.print_exc()
-
-
 def main():
     if len(sys.argv) != 3:
         print('Usage: mandarin <file> <output_file>')
@@ -90,6 +72,7 @@ def main():
         output_filename = sys.argv[2]
         with open(source_filename) as f:
             code = f.read()
+        fmt.formatter.code = code
 
         ast = run_parser(code, filename=source_filename)
         an = analyzer.Analyzer(ast, filename=source_filename)
@@ -116,7 +99,7 @@ def main():
             with open(output_filename, 'w') as f:
                 f.write(generated_code)
     except MandarinError as e:
-        print_compile_error(e, code=code)
+        fmt.formatter.print_compile_error(e)
         print('Build failed')
         sys.exit(2)
     except Exception as e:

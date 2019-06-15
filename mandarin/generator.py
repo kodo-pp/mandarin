@@ -219,8 +219,9 @@ class Context(object):
 class CxxGenerator(Generator):
     __slots__ = ['indenter', 'context']
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, bits=64, **kwargs):
         super().__init__(*args, **kwargs)
+        self.bits = bits
         self.indenter = Indenter(' ' * 4)
         self.context = Context()
 
@@ -261,7 +262,7 @@ class CxxGenerator(Generator):
     def generate_class_definition(self, cd):
         name = cd.name
         outer_buf = []
-        outer_buf.append('class mndr_{} : public mandarin::support::Shared {{\n'.format(name))
+        outer_buf.append('class mndr_{} : public mandarin::support::Object {{\n'.format(name))
         outer_buf.append('public:\n')
         buf = []
         for md in cd.method_decls:
@@ -298,9 +299,9 @@ class CxxGenerator(Generator):
 
     def canonicalize_type(self, typename):
         if typename.name == 'var':
-            return 'mandarin::support::SharedDynamicObject'
+            return 'std::shared_ptr<mandarin::support::Object>'
         else:
-            return 'mandarin::user::mndr_' + typename.name
+            return f'mandarin::shared_ptr<mandarin::user::mndr_{typename.name}>'
 
     def generate_function_arguments(self, fd):
         argument_strings = [
@@ -389,24 +390,60 @@ class CxxGenerator(Generator):
         return ['/* Expression (stub) [function call] */']
 
     def generate_identifier_expression(self, expr):
-        return ['/* Expression (stub) [identifier] */']
+        return [f'mndr_{expr.name}']
 
     def generate_literal_expression(self, expr):
-        return ['/* Expression (stub) [literal] */']
+        if isinstance(expr, an.StringExpression):
+            return [
+                'std::make_shared<mandarin::user::mndr_Str>({})'.format(
+                    self.escape_string(expr.value, expr.posinfo)
+                )
+            ]
+        elif isinstance(expr, an.IntegerExpression):
+            return [
+                'std::make_shared<mandarin::user::mndr_Int>({} MANDARIN_INTEGER_SUFFIX)'.format(
+                    self.check_integer(expr.value, expr.posinfo)
+                )
+            ]
+        else:
+            raise exc.InternalError(posinfo=expr.posinfo, message=f'Unknown literal class: {type(expr).__name__}')
+
+    def escape_string(self, s, posinfo):
+        encoded = s.encode('utf-8')
+        def generate():
+            yield '"'
+            for b in encoded:
+                if b < 32 or b >= 127:
+                    # Non-printable or non-ascii
+                    yield ('" "\\x{}" "').format(hex(b)[2:].zfill(2))
+                else:
+                    # Printable ascii
+                    yield chr(b)
+            yield '"'
+        return ''.join(generate())
+
+    def check_integer(self, x, posinfo):
+        values_count = 1 << self.bits
+        max_value = values_count // 2 - 1
+        min_value = -values_count // 2
+        if x < min_value or x > max_value:
+            exc.warn(exc.IntegerOutOfBounds(posinfo=posinfo, value=x))
+        return x
 
     def generate_property_expression(self, expr):
         return ['/* Expression (stub) [property] */']
 
     def generate_unop_expression(self, expr):
-        emulated, canon = self.canonicalize_unary_operator(expr.op)
-        if emulated:
-            return [f'mandarin::support::unop_{canon}({expr.arg})']
-        return [f'{canon}({"".join(self.generate_expression(expr.arg))})']
+        method = self.canonicalize_unary_operator(expr.op)
+        return [f'({"".join(self.generate_expression(expr.arg))})->{method}()']
 
     def canonicalize_unary_operator(self, op):
-        if op in ['+', '-', '!', '~']:
-            return False, op
-        assert False, f'Encountered unknown unary operator `op`'
+        return {
+            '+': '_mndr_unary_plus',
+            '-': '_mndr_unary_minus',
+            '!': '_mndr_unary_negate',
+            '~': '_mndr_unary_compl',
+        }[op]
 
     def generate_variable_assignment(self, stmt):
         maybe_var = self.context.maybe_get_variable(stmt.name)
