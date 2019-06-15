@@ -62,6 +62,22 @@ def run_parser(code, filename=None):
         ) from e
 
 
+def parse_file(filename, code):
+    ast = run_parser(code, filename=filename)
+    an = analyzer.Analyzer(ast, filename=filename)
+    return an
+
+
+def find_librin():
+    # STUB!
+    return 'librin.man'
+
+
+def read_file(filename):
+    with open(filename) as f:
+        return f.read()
+
+
 def main():
     if len(sys.argv) != 3:
         print('Usage: mandarin <file> <output_file>')
@@ -70,14 +86,20 @@ def main():
     try:
         source_filename = sys.argv[1]
         output_filename = sys.argv[2]
-        with open(source_filename) as f:
-            code = f.read()
-        fmt.formatter.code = code
+        librin_filename = find_librin()
 
-        ast = run_parser(code, filename=source_filename)
-        an = analyzer.Analyzer(ast, filename=source_filename)
-        decls = list(an.get_function_declarations())
-        defs = list(an.get_function_definitions())
+        main_code = read_file(source_filename)
+        librin_code = read_file(librin_filename)
+
+        formatter = fmt.Formatter(filename=source_filename, code=main_code)
+        formatter.add_file(filename=librin_filename, code=librin_code)
+
+        main_an = parse_file(source_filename, main_code)
+        librin_an = parse_file(librin_filename, librin_code)
+
+
+        #decls = list(an.get_function_declarations())
+        #defs = list(an.get_function_definitions())
         #print('-- FUNCTION DECLARATIONS --')
         #print(decls)
         #print()
@@ -90,7 +112,8 @@ def main():
             target = targets.select(options['target'])
         except KeyError as e:
             raise UsageError('No such target: {}'.format(options['target'])) from e
-        gen = target.GeneratorType(analyzer=an, options=options)
+        gen = target.GeneratorType(analyzer=main_an, formatter=formatter, options=options)
+        gen.import_analyzer(librin_an)
         
         generated_code = gen.generate()
         if output_filename == '-':
@@ -99,8 +122,8 @@ def main():
             with open(output_filename, 'w') as f:
                 f.write(generated_code)
     except MandarinError as e:
-        fmt.formatter.print_compile_error(e)
-        print('Build failed')
+        formatter.print_compile_error(e)
+        print('Build failed', file=sys.stderr)
         sys.exit(2)
     except Exception as e:
         print('Internal compiler error: {}: {}'.format(e.__class__.__name__, str(e)), file=sys.stderr)

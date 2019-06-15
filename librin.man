@@ -1,0 +1,3 @@
+# Stub!
+def native print(var string)
+def native input()

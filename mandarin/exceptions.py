@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-from . import format as fmt
+from .format import Formatter
 from .posinfo import Posinfo
 
 
@@ -26,7 +26,7 @@ class MandarinError(Exception):
         super().__init__(message)
 
     def __str__(self):
-        tab = fmt.formatter.get_colortab()
+        tab = Formatter.get_colortab()
         return f'{tab["desc"].format(self.description)}:\n    {super().__str__()}'
 
     description = 'Unknown error'
@@ -129,6 +129,14 @@ class InvalidImplicitDeclaration(SemanticalError):
     description = 'Invalid variable declaration'
 
 
-def warn(w):
+class ImportNameConflictError(SemanticalError):
+    def __init__(self, posinfo, name):
+        msg = f'Imported name `{name}` conflicts with already present one'
+        super().__init__(posinfo=posinfo, message=msg)
+
+    description = 'Import name conflict'
+
+
+def warn(w, formatter):
     # STUB!
-    fmt.formatter.print_compile_error(w, warning=True)
+    formatter.print_compile_error(w, warning=True)

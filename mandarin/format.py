@@ -26,10 +26,14 @@ colorama.init()
 
 
 class Formatter(object):
-    __slots__ = ['code']
+    __slots__ = ['data']
 
-    def __init__(self, code=''):
-        self.code = code
+    def __init__(self, filename, code):
+        self.data = {filename: code}
+
+    def add_file(self, filename, code):
+        assert filename not in self.data
+        self.data[filename] = code
 
     @staticmethod
     def is_output_colored(forced=None):
@@ -98,8 +102,9 @@ class Formatter(object):
         print(prefix + str(e), file=sys.stderr)
 
         #if not isinstance(e.posinfo, pi.EofPosinfo):
-        if e.posinfo.line is not None:
-            lines = self.code.split('\n')
+        if (e.posinfo.filename in self.data) and (e.posinfo.line is not None):
+            code = self.data[e.posinfo.filename]
+            lines = code.split('\n')
             n = len(lines)
             lineno = e.posinfo.line
             column_no = e.posinfo.column
@@ -117,6 +122,3 @@ class Formatter(object):
         if not warning and os.getenv('MANDARIN_VERBOSE_ERRORS', '0') == '1':
             print('Verbose errors enabled, displaying the traceback', file=sys.stderr)
             tb.print_exc()
-
-
-formatter = Formatter()

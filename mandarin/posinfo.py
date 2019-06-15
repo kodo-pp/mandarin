@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-from .format import formatter as fmt
+from .format import Formatter
 
 
 class Posinfo(object):
@@ -33,7 +33,7 @@ class Posinfo(object):
 
     def format(self, color=False):
         if color:
-            tab = fmt.get_colortab()
+            tab = Formatter.get_colortab()
             name = lambda x: tab['filename'].format(x)
             num  = lambda x: tab['number'].format(x)
             return f'{name(self.filename)}, line {num(self.line)}, column {num(self.column)}'
@@ -48,7 +48,7 @@ class EofPosinfo(Posinfo):
 
     def format(self, color=False):
         if color:
-            return '{}, end of file'.format(fmt.get_colortab()['filename'].format(self.filename))
+            return '{}, end of file'.format(Formatter.get_colortab()['filename'].format(self.filename))
         return '{}, end of file'.format(self.filename)
 
 

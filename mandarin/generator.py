@@ -23,12 +23,62 @@ from . import targets
 
 
 class Generator(object):
-    def __init__(self, analyzer, options):
-        self.analyzer = analyzer
-        self.class_defs     = list(self.analyzer.get_class_definitions())
-        self.function_decls = list(self.analyzer.get_function_declarations())
-        self.function_defs  = list(self.analyzer.get_function_definitions())
+    def __init__(self, analyzer, options, formatter):
+        self.class_defs     = list(analyzer.get_class_definitions())
+        self.function_decls = list(analyzer.get_function_declarations())
+        self.function_defs  = list(analyzer.get_function_definitions())
         self.options = options
+        self.names = set()
+        self.context = Context()
+        for i in self.class_defs:
+            self.add_name(i.name)
+        for i in self.function_decls:
+            self.add_name(i.name)
+
+    def import_analyzer(self, analyzer, scope=None, posinfo=None):
+        class_defs     = list(analyzer.get_class_definitions())
+        function_decls = list(analyzer.get_function_declarations())
+        function_defs  = list(analyzer.get_function_definitions()) 
+
+        if scope is None:
+            for i in class_defs:
+                self.add_name(i.name)
+            for i in function_decls:
+                self.add_name(i.name)
+        else:
+            self.add_name(scope)
+
+        class_defs     = self.scopify(scope, class_defs)
+        function_decls = self.scopify(scope, function_decls)
+        function_defs  = self.scopify(scope, function_defs)
+
+        self.class_defs     += class_defs
+        self.function_decls += function_decls
+        self.function_defs  += function_defs
+
+        for i in class_defs:
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('Type'))
+            self.context.add_variable(i.name, var)
+        for i in function_decls:
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('Function'))
+            self.context.add_variable(i.name, var)
+
+    @staticmethod
+    def scopify(scope, objects):
+        if scope is None:
+            return objects
+        def gen():
+            for i in objects:
+                x = copy.copy(i)
+                x.name = '{}.{}'.format(scope, i.name)
+                yield x
+        return list(gen())
+
+
+    def add_name(self, name, posinfo=None):
+        if name in self.names:
+            raise exc.ImportNameConflictError(posinfo=posinfo, name=name)
+
 
     def generate(self):
         buf = []
@@ -179,7 +229,7 @@ class Context(object):
 
     def __init__(self):
         self.function = None
-        self.stack = []
+        self.stack = [Context.Frame()]
 
     def maybe_add_variable(self, name, var):
         if len(self.stack) == 0:
@@ -217,13 +267,10 @@ class Context(object):
 
 
 class CxxGenerator(Generator):
-    __slots__ = ['indenter', 'context']
-
     def __init__(self, *args, bits=64, **kwargs):
         super().__init__(*args, **kwargs)
         self.bits = bits
         self.indenter = Indenter(' ' * 4)
-        self.context = Context()
 
     def generate_visual_separator(self):
         return ['\n']
@@ -445,7 +492,7 @@ class CxxGenerator(Generator):
         max_value = values_count // 2 - 1
         min_value = -values_count // 2
         if x < min_value or x > max_value:
-            exc.warn(exc.IntegerOutOfBounds(posinfo=posinfo, value=x))
+            exc.warn(exc.IntegerOutOfBounds(posinfo=posinfo, value=x), self.formatter)
         return x
 
     def generate_property_expression(self, expr):

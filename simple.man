@@ -3,7 +3,6 @@ def foo(Int x)
 end
 
 def main()
-    var print
-    print(2, 1, 5)
+    print(2)
     print('Hello world!')
 end
