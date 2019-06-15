@@ -154,6 +154,18 @@ def deduce_type_unop(op, argt):
 
 def deduce_call_type(func, args):
     # STUB!
+    callable_type = func.get_type()
+    if callable_type.name == 'var':
+        return Typename('var')
+
+    #if len(args) != len(func.arguments):
+    #    raise exc.FunctionArgumentsCountError(
+    #        posinfo = func.posinfo,
+    #        count = len(args),
+    #        expected = len(func.arguments),
+    #        function = func,
+    #        arguments = args,
+    #    )
     return Typename('var')
 
 

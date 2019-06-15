@@ -83,6 +83,16 @@ class DuplicateVariableDeclaration(SemanticalError):
     description = 'Duplicate variable declaration'
 
 
+class FunctionArgumentsCountError(SemanticalError):
+    def __init__(self, posinfo, count, expected, function, args):
+        msg = f'Function takes exactly {expected} argument(s) but {count} was(were) provided'
+        super().__init__(posinfo=posinfo, message=msg)
+        self.function = function
+        self.args = args
+
+    description = 'Invalid number of arguments'
+
+
 class UndeclaredVariable(SemanticalError):
     def __init__(self, posinfo, name):
         msg = f'Variable `{name}` is not declared'

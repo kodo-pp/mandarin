@@ -387,9 +387,17 @@ class CxxGenerator(Generator):
         return ['/* Expression (stub) [binary operator] */']
 
     def generate_function_call_expression(self, expr):
-        return ['/* Expression (stub) [function call] */']
+        return [
+            'mandarin::support::function_call({}{})'.format(
+                ''.join(self.generate_expression(expr.func)),
+                ''.join([
+                    ', ' + ''.join(self.generate_expression(arg)) for arg in expr.args
+                ]),
+            )
+        ]
 
     def generate_identifier_expression(self, expr):
+        assert isinstance(expr, an.IdentifierExpression)
         return [f'mndr_{expr.name}']
 
     def generate_literal_expression(self, expr):
@@ -464,7 +472,13 @@ class CxxGenerator(Generator):
                     init_value = stmt.expr,
                 ),
             )
-            return [f'{typename} mndr_{stmt.name} = {"".join(self.generate_expression(stmt.expr))};\n']
+            return [
+                '{} {} = {};\n'.format(
+                    typename,
+                    ''.join(self.generate_identifier_expression(stmt.name)),
+                    ''.join(self.generate_expression(stmt.expr)),
+                )
+            ]
         # XXX: STUB!
         if stmt.operator != '=':
             raise NotImplementedError('Assignment operators other than `=` are not yet implemented')
