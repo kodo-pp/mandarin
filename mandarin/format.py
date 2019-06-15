@@ -107,7 +107,7 @@ class Formatter(object):
             raw_prefix = '[line {:@}] |  '.replace('@', str(len(str(n)))).format(lineno)
             prefix = '    ' + tab['lineno_fmt'](raw_prefix)
             print(prefix + line, file=sys.stderr)
-            end = ' (newline)' if column_no >= len(line) else ''
+            end = ' (newline)' if column_no > len(line) else ''
             print('    ' + ' ' * len(raw_prefix) + tab['position_fmt'](
                 '~' * (column_no - 1) + '^' + '~' * (len(line) - column_no) + end),
                 file=sys.stderr,

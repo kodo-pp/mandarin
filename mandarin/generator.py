@@ -344,10 +344,18 @@ class CxxGenerator(Generator):
         canonical_return_type = self.canonicalize_type(return_type)
         buf.append(f'{canonical_return_type} mndr_{function_name}(')
         buf += self.generate_function_arguments(fd.decl)
-        buf.append(') {\n');
-        buf += self.generate_code_block(fd.body)
-        buf.append('}\n');
-        return buf
+        with self.context.push():
+            for arg in fd.decl.arguments:
+                decl = an.VariableDeclaration(
+                    posinfo = arg.posinfo,
+                    type = arg.type,
+                    name = arg.name,
+                )
+                self.context.add_variable(arg.name, decl)
+            buf.append(') {\n');
+            buf += self.generate_code_block(fd.body)
+            buf.append('}\n');
+            return buf
 
     def generate_code_block(self, block):
         with self.context.push():
@@ -398,6 +406,8 @@ class CxxGenerator(Generator):
 
     def generate_identifier_expression(self, expr):
         assert isinstance(expr, an.IdentifierExpression)
+        if not self.context.has_variable(expr.name):
+            raise exc.UndeclaredVariable(posinfo=expr.posinfo, name=expr.name)
         return [f'mndr_{expr.name}']
 
     def generate_literal_expression(self, expr):
@@ -463,19 +473,22 @@ class CxxGenerator(Generator):
                 # All other operators make it assignment-only statement, not a combined decl+assign one
                 raise exc.UndeclaredVariable(posinfo=stmt.posinfo, name=stmt.name)
             typename = self.canonicalize_type(stmt.expr.get_type())
+            if not isinstance(stmt.name, an.IdentifierExpression):
+                raise exc.InvalidImplicitDeclaration(posinfo=stmt.posinfo)
             self.context.add_variable(
-                name = stmt.name,
+                name = stmt.name.name,
                 var = an.VariableDeclaration(
                     posinfo = stmt.posinfo,
-                    name = stmt.name,
+                    name = stmt.name.name,
                     type = typename,
                     init_value = stmt.expr,
                 ),
             )
             return [
+                f'// {repr(stmt.expr)}\n',
                 '{} {} = {};\n'.format(
                     typename,
-                    ''.join(self.generate_identifier_expression(stmt.name)),
+                    ''.join(self.generate_expression(stmt.name)),
                     ''.join(self.generate_expression(stmt.expr)),
                 )
             ]

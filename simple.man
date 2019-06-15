@@ -1,4 +1,9 @@
+def foo(Int x)
+    y = x
+end
+
 def main()
+    var print
     print(2, 1, 5)
     print('Hello world!')
 end

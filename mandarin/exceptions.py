@@ -121,6 +121,14 @@ class IntegerOutOfBounds(SemanticalError):
     description = 'Literal value out of bounds'
 
 
+class InvalidImplicitDeclaration(SemanticalError):
+    def __init__(self, posinfo):
+        msg = f'Implicit declaration of a non-local variable via assignment is not allowed'
+        super().__init__(posinfo=posinfo, message=msg)
+
+    description = 'Invalid variable declaration'
+
+
 def warn(w):
     # STUB!
     fmt.formatter.print_compile_error(w, warning=True)
