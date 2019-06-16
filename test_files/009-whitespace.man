@@ -8,6 +8,10 @@ def main(
     print   (
         "Hello world!"
     )
+  var      long_variable_name    
+
+
+        var                              another_long_variable_name
 unindented = 1
     4 + 2 * (long_variable_name
         + another_long_variable_name)

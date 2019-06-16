@@ -1,3 +1,9 @@
 # Stub!
 def native print(var string)
 def native input()
+
+class native Int
+end
+
+class native Str
+end

@@ -3,6 +3,7 @@ def foo(Int x)
 end
 
 def main()
+    x = Int(input())
     print(2)
     print('Hello world!')
 end

@@ -1,3 +1,5 @@
 def main()
+    var foo
+    var bar
     (foo + bar)(5, 12, 6)
 end

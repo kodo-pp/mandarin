@@ -23,7 +23,7 @@ code: toplevel_statement*
 
 // Class
 
-class_definition: KW_CLASS IDENTIFIER _NL class_block_end
+class_definition: KW_CLASS KW_NATIVE? IDENTIFIER _NL class_block_end
 
 class_block_end: (class_statement | _NL)* KW_END
 

@@ -35,6 +35,13 @@ class Generator(object):
         for i in self.function_decls:
             self.add_name(i.name)
 
+        for i in self.class_defs:
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('@Type'))
+            self.context.add_variable(i.name, var)
+        for i in self.function_decls:
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('@Function'))
+            self.context.add_variable(i.name, var)
+
     def import_analyzer(self, analyzer, scope=None, posinfo=None):
         class_defs     = list(analyzer.get_class_definitions())
         function_decls = list(analyzer.get_function_declarations())
@@ -57,10 +64,10 @@ class Generator(object):
         self.function_defs  += function_defs
 
         for i in class_defs:
-            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('Type'))
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('@Type'))
             self.context.add_variable(i.name, var)
         for i in function_decls:
-            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('Function'))
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('@Function'))
             self.context.add_variable(i.name, var)
 
     @staticmethod
@@ -307,6 +314,8 @@ class CxxGenerator(Generator):
         return buf
 
     def generate_class_definition(self, cd):
+        if cd.is_native:
+            return []
         name = cd.name
         outer_buf = []
         outer_buf.append('class mndr_{} : public mandarin::support::Object {{\n'.format(name))
@@ -376,7 +385,7 @@ class CxxGenerator(Generator):
         return buf
 
     def generate_class_declarations(self, class_defs, function_decls, function_defs):
-        return [f'class mndr_{cd.name};\n' for cd in class_defs]
+        return [f'class mndr_{cd.name};\n' for cd in class_defs if not cd.is_native]
 
     def generate_function_definitions(self, class_defs, function_decls, function_defs):
         return sum(
@@ -505,7 +514,7 @@ class CxxGenerator(Generator):
     def generate_property_expression(self, expr):
         # TODO: optimize
         # No need to escape `prop`
-        return ['(', self.generate_expression(expr.obj), f')->_mndr_get("{expr.prop}")']
+        return ['('] + self.generate_expression(expr.obj) + [f')->_mndr_get("{expr.prop}")']
 
     def generate_unop_expression(self, expr):
         method = self.canonicalize_unary_operator(expr.op)

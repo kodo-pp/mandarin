@@ -67,18 +67,20 @@ class FunctionDeclaration(Node):
 
 
 class ClassDefinition(Node):
-    def __init__(self, posinfo, name, members, method_decls, method_defs):
+    def __init__(self, posinfo, is_native, name, members, method_decls, method_defs):
         super().__init__(posinfo)
         self.name = name
         self.members = members
         self.method_decls = method_decls
         self.method_defs = method_defs
+        self.is_native = is_native
     
     def __str__(self):
         return repr(self)
 
     def __repr__(self):
-        return 'Class(name: {}, members: {}, methods: (decls: {}, defs: {}))'.format(
+        return 'Class{}(name: {}, members: {}, methods: (decls: {}, defs: {}))'.format(
+            ' native' if self.is_native else '',
             self.name,
             [repr(x) for x in self.members],
             [repr(x) for x in self.method_decls],
@@ -415,15 +417,16 @@ class Analyzer(object):
 
 
     def parse_class_definition(self, node):
-        # class_definition: (0) KW_CLASS (1) IDENTIFIER _NL (2) class_block_end
+        # class_definition: (0) KW_CLASS (1?) KW_NATIVE? (-2) IDENTIFIER _NL (-1) class_block_end
         # class_block_end: class_statement* KW_END
         assert isinstance(node, lark.tree.Tree)
         assert node.data == 'class_definition'
-        assert len(node.children) == 3
+        assert len(node.children) in [3, 4]
 
-        class_name = node.children[1].value
-        
-        block = node.children[2]
+        is_native = (len(node.children) == 4)
+    
+        class_name = node.children[-2].value
+        block = node.children[-1]
         assert isinstance(block, lark.tree.Tree)
         assert block.data.startswith('class_block')
         assert len(block.children) >= 1
@@ -445,6 +448,7 @@ class Analyzer(object):
 
         return ClassDefinition(
             posinfo = pi.from_lark(filename=self.filename, node=node),
+            is_native = is_native,
             name = class_name,
             members = members,
             method_decls = mdecls,
