@@ -133,8 +133,19 @@ class ImportNameConflictError(SemanticalError):
     def __init__(self, posinfo, name):
         msg = f'Imported name `{name}` conflicts with already present one'
         super().__init__(posinfo=posinfo, message=msg)
+        self.name = name
 
     description = 'Import name conflict'
+
+
+class InexistentPropertyError(SemanticalError):
+    def __init__(self, posinfo, prop):
+        msg = f'Object has no property `{prop}`'
+        super().__init__(posinfo=posinfo, message=msg)
+        self.prop = prop
+
+    description = 'No such property'
+    
 
 
 def warn(w, formatter):

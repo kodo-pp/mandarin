@@ -380,7 +380,7 @@ class CxxGenerator(Generator):
 
     def generate_function_definitions(self, class_defs, function_decls, function_defs):
         return sum(
-            [self.generate_function_definition(fd,) for fd in function_defs],
+            [self.generate_function_definition(fd) for fd in function_defs],
             [],
         )
 
@@ -439,7 +439,14 @@ class CxxGenerator(Generator):
         raise exc.InternalError(posinfo=expr.posinfo, message=f'Unknown expression class: {Type.__name__}')
 
     def generate_binop_expression(self, expr):
-        return ['/* Expression (stub) [binary operator] */']
+        canon = self.canonicalize_binary_operator(expr.op)
+        return (
+            ['(']
+            + self.generate_expression(expr.lhs)
+            + [f')->{canon}(']
+            + self.generate_expression(expr.rhs)
+            + [')']
+        )
 
     def generate_function_call_expression(self, expr):
         return [
@@ -496,7 +503,9 @@ class CxxGenerator(Generator):
         return x
 
     def generate_property_expression(self, expr):
-        return ['/* Expression (stub) [property] */']
+        # TODO: optimize
+        # No need to escape `prop`
+        return ['(', self.generate_expression(expr.obj), f')->_mndr_get("{expr.prop}")']
 
     def generate_unop_expression(self, expr):
         method = self.canonicalize_unary_operator(expr.op)
@@ -508,6 +517,27 @@ class CxxGenerator(Generator):
             '-': '_mndr_unary_minus',
             '!': '_mndr_unary_negate',
             '~': '_mndr_unary_compl',
+        }[op]
+
+    def canonicalize_binary_operator(self, op):
+        return {
+            '*':    '_mndr_binary_multiply',
+            '/':    '_mndr_binary_divide',
+            '%':    '_mndr_binary_modulo',
+            '//':   '_mndr_binary_int_divide',
+            '+':    '_mndr_binary_plus',
+            '-':    '_mndr_binary_minus',
+            '...':  '_mndr_binary_incrange',
+            '..':   '_mndr_binary_range',
+            '==':   '_mndr_binary_equals',
+            '<=':   '_mndr_binary_less_equals',
+            '>=':   '_mndr_binary_greater_equals',
+            '!=':   '_mndr_binary_not_equals',
+            '<':    '_mndr_binary_less',
+            '>':    '_mndr_binary_greater',
+            '&&':   '_mndr_binary_logical_and',
+            '||':   '_mndr_binary_logical_or',
+            '++':   '_mndr_binary_logical_xor',
         }[op]
 
     def generate_variable_assignment(self, stmt):
@@ -533,16 +563,23 @@ class CxxGenerator(Generator):
             )
             return [
                 f'// {repr(stmt.expr)}\n',
-                '{} {} = {};\n'.format(
+                '{} {} = mandarin::support::cast_to<{}>({});\n'.format(
                     typename,
                     ''.join(self.generate_expression(stmt.name)),
+                    typename,
                     ''.join(self.generate_expression(stmt.expr)),
                 )
             ]
         # XXX: STUB!
         if stmt.operator != '=':
             raise NotImplementedError('Assignment operators other than `=` are not yet implemented')
-        return [f'mndr_{stmt.name} = {"".join(self.generate_expression(stmt.expr))};\n']
+        return [
+            'mndr_{stmt.name} = mandarin::support::cast_to<{}>({});\n'.format(
+                stmt.name,
+                self.canonicalize_type(maybe_var.type),
+                ''.join(self.generate_expression(stmt.expr)),
+            )
+        ]
 
     def generate_variable_declaration(self, decl):
         name = decl.name
