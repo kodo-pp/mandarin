@@ -1,0 +1,4 @@
+def native self(x)
+
+def main()
+end

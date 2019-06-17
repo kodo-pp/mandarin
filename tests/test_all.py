@@ -32,12 +32,8 @@ def _test_parses(filename, expect=True):
     if expect:
         parses(code)
     else:
-        with pytest.raises(exc.MandarinSyntaxError):
+        with pytest.raises(exc.MandarinError):
             parses(code)
-            print('Something must be wrong')
-            print('AST (dump): ' + repr(ast))
-            print('AST (pretty):')
-            print(ast.pretty())
 
 
 def test_001():
@@ -90,6 +86,19 @@ def test_012():
 
 def test_013():
     _test_parses('./test_files/013-many-operators.man')
+
+
+def test_014():
+    _test_parses('./test_files/014-fizz-buzz.man')
+
+
+def test_015():
+    _test_parses('./test_files/015-empty-class.man')
+
+
+def test_016():
+    _test_parses('./test_files/016-self-as-a-class-member.man')
+
 
 
 
@@ -179,3 +188,27 @@ def test_inv_021():
 
 def test_inv_022():
     _test_parses('./test_files/invalid/022-keyword-as-identifier-declaration.man', expect=False)
+
+
+def test_inv_023():
+    _test_parses('./test_files/invalid/023-self-as-variable-decl.man', expect=False)
+
+
+def test_inv_024():
+    _test_parses('./test_files/invalid/024-self-as-variable-assign.man', expect=False)
+
+
+def test_inv_025():
+    _test_parses('./test_files/invalid/025-self-as-function-name.man', expect=False)
+
+
+def test_inv_026():
+    _test_parses('./test_files/invalid/026-self-as-native-function-name.man', expect=False)
+
+
+def test_inv_027():
+    _test_parses('./test_files/invalid/027-self-as-class-name.man', expect=False)
+
+
+def test_inv_028():
+    _test_parses('./test_files/invalid/028-self-outside-class.man', expect=False)

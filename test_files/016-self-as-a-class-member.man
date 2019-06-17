@@ -1,0 +1,13 @@
+class Foo
+    def new()
+        self.self = 5
+    end
+
+    def foo()
+        # Ugly and non-obvious but correct
+        print(self.self)
+    end
+end
+
+def main()
+end
