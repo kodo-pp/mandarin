@@ -29,5 +29,5 @@ setup(
     packages            = ['mandarin'],
     tests_require       = ['pytest'],
     setup_requires      = ['pytest-runner'],
-    install_requires    = ['lark-parser', 'colorama'],
+    install_requires    = ['lark-parser', 'colorama', 'typeguard'],
 )
