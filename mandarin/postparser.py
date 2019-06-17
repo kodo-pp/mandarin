@@ -34,6 +34,7 @@ class BinaryOperatorNode(lark.tree.Tree):
 def make_op(terminals):
     return ''.join([t.value for t in terminals])
 
+
 def binop(x):
     rhs = x[-1]
     operand_index = len(x) - 2
@@ -50,6 +51,7 @@ def binop(x):
     node.meta.line = op_line
     node.meta.column = op_column
     return node
+
 
 class PostParser(lark.visitors.Transformer):
     @staticmethod

@@ -566,9 +566,9 @@ class Analyzer(object):
         operator = self.parse_operator(node.children[1])
         expr = self.parse_expression(node.children[2])
         if not lhs.get_type().lvalue:
-            line = node.children[0].line
-            column = node.children[0].column
-            posinfo = Posinfo(filename=self.filename, line=line, column=column)
+            line = node.children[1].line
+            column = node.children[1].column
+            posinfo = pi.Posinfo(filename=self.filename, line=line, column=column)
             raise exc.TypeMismatchError('At variable assignment: left-hand side is not a lvalue', posinfo)
         return VariableAssignment(
             posinfo = pi.from_lark(filename=self.filename, node=node),

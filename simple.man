@@ -1,9 +1,5 @@
-def foo(Int x)
-    y = x
-end
-
 def main()
-    x = Int(input())
-    print(2)
-    print('Hello world!')
+    foo = 5
+    foo = 6
+    (foo + 4) = 8
 end

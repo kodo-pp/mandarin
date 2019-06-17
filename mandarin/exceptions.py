@@ -145,6 +145,23 @@ class InexistentPropertyError(SemanticalError):
         self.prop = prop
 
     description = 'No such property'
+
+
+class SpecialIdentifierDeclared(SemanticalError):
+    def __init__(self, posinfo, name):
+        msg = f'Identifier `{name}` is special and cannot be used as an object name'
+        super().__init__(posinfo=posinfo, message=msg)
+        self.name = name
+
+    description = 'Special identifier declared'
+
+
+class AssignmentToRvalue(SemanticalError):
+    def __init__(self, posinfo):
+        msg = f'Cannot assign to a Rvalue expression'
+        super().__init__(posinfo=posinfo, message=msg)
+
+    description = 'Assignment to a Rvalue'
     
 
 

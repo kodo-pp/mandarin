@@ -88,12 +88,16 @@ class Generator(object):
                 yield x
         return list(gen())
 
-
     @typechecked
     def add_name(self, name: str, posinfo=None):
+        if self.is_special_identifier(name):
+            raise exc.SpecialIdentifierDeclared(posinfo=posinfo, name=name)
         if name in self.names:
             raise exc.ImportNameConflictError(posinfo=posinfo, name=name)
 
+    @typechecked
+    def is_special_identifier(self, name: str) -> bool:
+        return name == 'self'
 
     @typechecked
     def generate(self) -> str:
@@ -522,7 +526,8 @@ class CxxGenerator(Generator):
 
     @typechecked
     def generate_identifier_expression(self, expr: an.IdentifierExpression) -> List[str]:
-        assert isinstance(expr, an.IdentifierExpression)
+        if expr.name == 'self':
+            return ['this']
         if not self.context.has_variable(expr.name):
             raise exc.UndeclaredVariable(posinfo=expr.posinfo, name=expr.name)
         return [f'mndr_{expr.name}']
@@ -611,6 +616,17 @@ class CxxGenerator(Generator):
         }[op]
 
     @typechecked
+    def canonicalize_assignment_operator(self, op: str) -> str:
+        return {
+            '+=':   '_mndr_assign_plus',
+            '-=':   '_mndr_assign_minus',
+            '*=':   '_mndr_assign_multiply',
+            '/=':   '_mndr_assign_divide',
+            '//=':  '_mndr_assign_int_divide',
+            '%=':   '_mndr_assign_modulo',
+        }[op]
+
+    @typechecked
     def generate_variable_assignment(self, stmt: an.VariableAssignment) -> List[str]:
         # Sorry about it, but in fact it isn't a variable assignment
         # it is just an assignment to a Lvalue expression.
@@ -618,6 +634,8 @@ class CxxGenerator(Generator):
         # be an assignment combined with an implicit declaration
         # Somebody, please just delete this repo!
         lhs = stmt.lhs
+        if not lhs.get_type().lvalue:
+            raise exc.AssignmentToRvalue(posinfo=stmt.posinfo)
         if isinstance(lhs, an.IdentifierExpression):
             # lhs is variable
             name = lhs.name
@@ -626,6 +644,8 @@ class CxxGenerator(Generator):
                 # Combined assignment + declaration with implicit type inference
                 # (like `x = 5` with no `x` declared earlier)
                 # No assignment operator but `=` is permitted
+                if self.is_special_identifier(name):
+                    raise exc.SpecialIdentifierDeclared(posinfo=stmt.posinfo, name=name)
                 if stmt.operator != '=':
                     # All other operators make it assignment-only statement, not a combined decl+assign one
                     raise exc.UndeclaredVariable(posinfo=stmt.posinfo, name=stmt.name)
@@ -650,9 +670,16 @@ class CxxGenerator(Generator):
 
         # XXX: STUB!
         if stmt.operator != '=':
-            raise NotImplementedError('Assignment operators other than `=` are not yet implemented')
+            return [
+                '({})->{}(mandarin::support::cast_to<{}>({}));\n'.format(
+                    ''.join(self.generate_expression(lhs)),
+                    self.canonicalize_assignment_operator(stmt.operator),
+                    self.canonicalize_type(lhs.get_type()),
+                    ''.join(self.generate_expression(stmt.expr)),
+                )
+            ]
         return [
-            'mndr_{} = mandarin::support::cast_to<{}>({});\n'.format(
+            '{} = mandarin::support::cast_to<{}>({});\n'.format(
                 ''.join(self.generate_expression(lhs)),
                 self.canonicalize_type(lhs.get_type()),
                 ''.join(self.generate_expression(stmt.expr)),
@@ -662,6 +689,8 @@ class CxxGenerator(Generator):
     @typechecked
     def generate_variable_declaration(self, decl: an.VariableDeclaration) -> List[str]:
         name = decl.name
+        if self.is_special_identifier(name):
+            raise exc.SpecialIdentifierDeclared(posinfo=decl.posinfo, name=name)
         typename = self.canonicalize_type(decl.type)
         try:
             self.context.add_variable(name=decl.name, var=decl)
