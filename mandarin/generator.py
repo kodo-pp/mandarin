@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import abc
-from typing import List
+from typing import List, Optional, Set, Tuple
 
 from . import analyzer as an
 from . import exceptions as exc
@@ -23,13 +23,14 @@ from . import targets
 
 
 class Generator(object):
-    def __init__(self, analyzer, options, formatter):
+    def __init__(self, analyzer: an.Analyzer, options: dict, formatter):
         self.class_defs     = list(analyzer.get_class_definitions())
         self.function_decls = list(analyzer.get_function_declarations())
         self.function_defs  = list(analyzer.get_function_definitions())
         self.options = options
-        self.names = set()
+        self.names: Set[str] = set()
         self.context = Context()
+        self.formatter = formatter
         for i in self.class_defs:
             self.add_name(i.name)
         for i in self.function_decls:
@@ -42,7 +43,7 @@ class Generator(object):
             var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('@Function'))
             self.context.add_variable(i.name, var)
 
-    def import_analyzer(self, analyzer, scope=None, posinfo=None):
+    def import_analyzer(self, analyzer: an.Analyzer, scope: Optional[str] = None, posinfo: Optional[str] = None):
         class_defs     = list(analyzer.get_class_definitions())
         function_decls = list(analyzer.get_function_declarations())
         function_defs  = list(analyzer.get_function_definitions()) 
@@ -71,7 +72,7 @@ class Generator(object):
             self.context.add_variable(i.name, var)
 
     @staticmethod
-    def scopify(scope, objects):
+    def scopify(scope: Optional[str], objects: list) -> list:
         if scope is None:
             return objects
         def gen():
@@ -82,13 +83,13 @@ class Generator(object):
         return list(gen())
 
 
-    def add_name(self, name, posinfo=None):
+    def add_name(self, name: str, posinfo=None):
         if name in self.names:
             raise exc.ImportNameConflictError(posinfo=posinfo, name=name)
 
 
-    def generate(self):
-        buf = []
+    def generate(self) -> str:
+        buf: List[str] = []
 
         class_defs     = self.class_defs
         function_decls = self.function_decls
@@ -161,17 +162,18 @@ class Generator(object):
 
 
 class Indenter(object):
-    def __init__(self, indent_string):
+    def __init__(self, indent_string: str):
         self.indent_string = indent_string
 
-    def get_indentation(self):
+    def get_indentation(self) -> str:
         return self.indent_string
 
-    def indent(self, buf):
+    def indent(self, buf: List[str]) -> List[str]:
         code = ''.join(buf)
         lines = code.split('\n')
         indented_lines = [(self.get_indentation() if len(line) > 0 else '') + line for line in lines]
-        return '\n'.join(indented_lines)
+        #return '\n'.join(indented_lines)
+        return indented_lines
 
 
 class Context(object):
@@ -188,23 +190,23 @@ class Context(object):
         def __init__(self):
             self.variables = {}
 
-        def maybe_add_variable(self, name, var):
+        def maybe_add_variable(self, name: str, var: an.VariableDeclaration) -> bool:
             if self.has_variable(name):
                 return False
             self.variables[name] = var
             return True
 
-        def has_variable(self, name):
+        def has_variable(self, name: str) -> bool:
             return self.maybe_get_variable(name) is not None
 
-        def add_variable(self, name, var):
+        def add_variable(self, name: str, var: an.VariableDeclaration):
             if not self.maybe_add_variable(name, var):
                 raise Context.VariableAlreadyExists(name)
 
-        def maybe_get_variable(self, name):
+        def maybe_get_variable(self, name: str) -> Optional[an.VariableDeclaration]:
             return self.variables.get(name, None)
 
-        def get_variable(self, name):
+        def get_variable(self, name: str) -> an.VariableDeclaration:
             maybe_var = self.maybe_get_variable(name)
             if maybe_var is None:
                 raise KeyError(name)
@@ -238,29 +240,29 @@ class Context(object):
         self.function = None
         self.stack = [Context.Frame()]
 
-    def maybe_add_variable(self, name, var):
+    def maybe_add_variable(self, name: str, var: an.VariableDeclaration) -> bool:
         if len(self.stack) == 0:
             raise Context.StackEmptyError()
         return self.stack[-1].maybe_add_variable(name, var)
 
-    def add_variable(self, name, var):
+    def add_variable(self, name: str, var: an.VariableDeclaration):
         if not self.maybe_add_variable(name, var):
             raise Context.VariableAlreadyExists(name)
 
-    def maybe_get_variable(self, name):
+    def maybe_get_variable(self, name: str) -> Optional[an.VariableDeclaration]:
         for frame in reversed(self.stack):
             maybe_var = frame.maybe_get_variable(name)
             if maybe_var is not None:
                 return maybe_var
         return None
 
-    def get_variable(self, name):
+    def get_variable(self, name: str) -> an.VariableDeclaration:
         maybe_var = self.maybe_get_variable(name)
         if maybe_var is None:
             raise KeyError(name)
         return maybe_var
 
-    def has_variable(self, name):
+    def has_variable(self, name: str) -> bool:
         return self.maybe_get_variable(name) is not None
 
     def raw_push(self):
@@ -274,15 +276,15 @@ class Context(object):
 
 
 class CxxGenerator(Generator):
-    def __init__(self, *args, bits=64, **kwargs):
+    def __init__(self, *args, bits: int = 64, **kwargs):
         super().__init__(*args, **kwargs)
         self.bits = bits
         self.indenter = Indenter(' ' * 4)
 
-    def generate_visual_separator(self):
+    def generate_visual_separator(self) -> List[str]:
         return ['\n']
 
-    def generate_prologue(self):
+    def generate_prologue(self) -> List[str]:
         return [
             '/* This file was auto-generated by Mandarin compiler */\n',
             '#include <csetjmp>\n',
@@ -292,7 +294,7 @@ class CxxGenerator(Generator):
             'namespace mandarin {namespace user {\n',
         ]
 
-    def generate_epilogue(self):
+    def generate_epilogue(self) -> List[str]:
         common_epilogue = [
             '}} /* namespace mandarin::user */\n',
         ]
@@ -307,20 +309,20 @@ class CxxGenerator(Generator):
         ] if self.options['is_standalone'] else []
         return common_epilogue + standalone_epilogue
 
-    def generate_class_definitions(self, class_defs, function_decls, function_defs):
-        buf = []
+    def generate_class_definitions(self, class_defs, function_decls, function_defs) -> List[str]:
+        buf: List[str] = []
         for cd in class_defs:
             buf += self.generate_class_definition(cd)
         return buf
 
-    def generate_class_definition(self, cd):
+    def generate_class_definition(self, cd: an.ClassDefinition) -> List[str]:
         if cd.is_native:
             return []
         name = cd.name
         outer_buf = []
         outer_buf.append('class mndr_{} : public mandarin::support::Object {{\n'.format(name))
         outer_buf.append('public:\n')
-        buf = []
+        buf: List[str] = []
         for md in cd.method_decls:
             buf += self.generate_method_declaration(md, cd)
         for member in cd.members:
@@ -330,7 +332,7 @@ class CxxGenerator(Generator):
         outer_buf.append('};\n')
         return outer_buf
 
-    def generate_method_declaration(self, md, cd):
+    def generate_method_declaration(self, md: an.FunctionDeclaration, cd: an.ClassDefinition) -> List[str]:
         method_name = md.name
         has_typename, canonical_method_name = self.canonicalize_method_name(method_name, cd)
         buf = []
@@ -344,7 +346,8 @@ class CxxGenerator(Generator):
         buf.append(');\n');
         return buf
 
-    def canonicalize_method_name(self, method_name, cd):
+    def canonicalize_method_name(self, method_name: str, cd: an.ClassDefinition) -> Tuple[bool, str]:
+        # Returns (has_typename, canonical_name)
         raw_name = method_name.split('.')[-1]
         if raw_name == 'new':
             return False, 'new'
@@ -353,28 +356,28 @@ class CxxGenerator(Generator):
         else:
             return True, raw_name
 
-    def canonicalize_type(self, typename):
+    def canonicalize_type(self, typename: an.Typename) -> str:
         if typename.name == 'var':
             return 'std::shared_ptr<mandarin::support::Object>'
         else:
             return f'mandarin::shared_ptr<mandarin::user::mndr_{typename.name}>'
 
-    def generate_function_arguments(self, fd):
+    def generate_function_arguments(self, fd: an.FunctionDeclaration) -> List[str]:
         argument_strings = [
             f'{self.canonicalize_type(arg.type)} mndr_{arg.name}'
             for arg in fd.arguments
         ]
         return [', '.join(argument_strings)]
 
-    def generate_function_declarations(self, class_defs, function_decls, function_defs):
-        buf = []
+    def generate_function_declarations(self, class_defs, function_decls, function_defs) -> List[str]:
+        buf: List[str] = []
         for fd in function_decls:
             if '.' in fd.name:
                 continue
             buf += self.generate_function_declaration(fd)
         return buf
 
-    def generate_function_declaration(self, fd):
+    def generate_function_declaration(self, fd: an.FunctionDeclaration) -> List[str]:
         function_name = fd.name
         buf = []
         return_type = fd.return_type
@@ -384,16 +387,16 @@ class CxxGenerator(Generator):
         buf.append(');\n');
         return buf
 
-    def generate_class_declarations(self, class_defs, function_decls, function_defs):
+    def generate_class_declarations(self, class_defs, function_decls, function_defs) -> List[str]:
         return [f'class mndr_{cd.name};\n' for cd in class_defs if not cd.is_native]
 
-    def generate_function_definitions(self, class_defs, function_decls, function_defs):
+    def generate_function_definitions(self, class_defs, function_decls, function_defs) -> List[str]:
         return sum(
             [self.generate_function_definition(fd) for fd in function_defs],
             [],
         )
 
-    def generate_function_definition(self, fd):
+    def generate_function_definition(self, fd: an.FunctionDefiniton) -> List[str]:
         function_name = fd.decl.name
         buf = []
         return_type = fd.decl.return_type
@@ -413,14 +416,14 @@ class CxxGenerator(Generator):
             buf.append('}\n');
             return buf
 
-    def generate_code_block(self, block):
+    def generate_code_block(self, block: List[an.Node]) -> List[str]:
         with self.context.push():
-            buf = []
+            buf: List[str] = []
             for statement in block:
                 buf += self.generate_code_statement(statement)
             return self.indenter.indent(buf)
 
-    def generate_code_statement(self, stmt):
+    def generate_code_statement(self, stmt: an.Node) -> List[str]:
         methods = [
             (an.Expression,             lambda e: self.generate_expression(e) + [';\n']),
             (an.VariableAssignment,     self.generate_variable_assignment),
@@ -433,7 +436,7 @@ class CxxGenerator(Generator):
         #raise exc.InternalError(posinfo=stmt.posinfo, message=f'Unknown statement class: {Type.__name__}')
         return [f'/* Unimplemented (stub) statement type "{type(stmt)}" */\n']
 
-    def generate_expression(self, expr):
+    def generate_expression(self, expr: an.Expression) -> List[str]:
         methods = [
             (an.BinaryOperatorExpression,   self.generate_binop_expression),
             (an.FunctionCallExpression,     self.generate_function_call_expression),
@@ -447,7 +450,7 @@ class CxxGenerator(Generator):
                 return method(expr)
         raise exc.InternalError(posinfo=expr.posinfo, message=f'Unknown expression class: {Type.__name__}')
 
-    def generate_binop_expression(self, expr):
+    def generate_binop_expression(self, expr: an.BinaryOperatorExpression) -> List[str]:
         canon = self.canonicalize_binary_operator(expr.op)
         return (
             ['(']
@@ -457,7 +460,7 @@ class CxxGenerator(Generator):
             + [')']
         )
 
-    def generate_function_call_expression(self, expr):
+    def generate_function_call_expression(self, expr: an.FunctionCallExpression) -> List[str]:
         return [
             'mandarin::support::function_call({}{})'.format(
                 ''.join(self.generate_expression(expr.func)),
@@ -467,13 +470,13 @@ class CxxGenerator(Generator):
             )
         ]
 
-    def generate_identifier_expression(self, expr):
+    def generate_identifier_expression(self, expr: an.IdentifierExpression) -> List[str]:
         assert isinstance(expr, an.IdentifierExpression)
         if not self.context.has_variable(expr.name):
             raise exc.UndeclaredVariable(posinfo=expr.posinfo, name=expr.name)
         return [f'mndr_{expr.name}']
 
-    def generate_literal_expression(self, expr):
+    def generate_literal_expression(self, expr: an.LiteralExpression) -> List[str]:
         if isinstance(expr, an.StringExpression):
             return [
                 'std::make_shared<mandarin::user::mndr_Str>({})'.format(
@@ -489,7 +492,7 @@ class CxxGenerator(Generator):
         else:
             raise exc.InternalError(posinfo=expr.posinfo, message=f'Unknown literal class: {type(expr).__name__}')
 
-    def escape_string(self, s, posinfo):
+    def escape_string(self, s: str, posinfo) -> str:
         encoded = s.encode('utf-8')
         def generate():
             yield '"'
@@ -503,7 +506,7 @@ class CxxGenerator(Generator):
             yield '"'
         return ''.join(generate())
 
-    def check_integer(self, x, posinfo):
+    def check_integer(self, x: int, posinfo) -> int:
         values_count = 1 << self.bits
         max_value = values_count // 2 - 1
         min_value = -values_count // 2
@@ -511,16 +514,16 @@ class CxxGenerator(Generator):
             exc.warn(exc.IntegerOutOfBounds(posinfo=posinfo, value=x), self.formatter)
         return x
 
-    def generate_property_expression(self, expr):
+    def generate_property_expression(self, expr: an.PropertyExpression) -> List[str]:
         # TODO: optimize
         # No need to escape `prop`
         return ['('] + self.generate_expression(expr.obj) + [f')->_mndr_get("{expr.prop}")']
 
-    def generate_unop_expression(self, expr):
+    def generate_unop_expression(self, expr: an.UnaryOperatorExpression) -> List[str]:
         method = self.canonicalize_unary_operator(expr.op)
         return [f'({"".join(self.generate_expression(expr.arg))})->{method}()']
 
-    def canonicalize_unary_operator(self, op):
+    def canonicalize_unary_operator(self, op: str) -> str:
         return {
             '+': '_mndr_unary_plus',
             '-': '_mndr_unary_minus',
@@ -528,7 +531,7 @@ class CxxGenerator(Generator):
             '~': '_mndr_unary_compl',
         }[op]
 
-    def canonicalize_binary_operator(self, op):
+    def canonicalize_binary_operator(self, op: str) -> str:
         return {
             '*':    '_mndr_binary_multiply',
             '/':    '_mndr_binary_divide',
@@ -549,7 +552,7 @@ class CxxGenerator(Generator):
             '++':   '_mndr_binary_logical_xor',
         }[op]
 
-    def generate_variable_assignment(self, stmt):
+    def generate_variable_assignment(self, stmt: an.VariableAssignment) -> List[str]:
         maybe_var = self.context.maybe_get_variable(stmt.name)
         if maybe_var is None:
             # Combined assignment + declaration with implicit type inference
@@ -571,7 +574,6 @@ class CxxGenerator(Generator):
                 ),
             )
             return [
-                f'// {repr(stmt.expr)}\n',
                 '{} {} = mandarin::support::cast_to<{}>({});\n'.format(
                     typename,
                     ''.join(self.generate_expression(stmt.name)),
@@ -590,7 +592,7 @@ class CxxGenerator(Generator):
             )
         ]
 
-    def generate_variable_declaration(self, decl):
+    def generate_variable_declaration(self, decl: an.VariableDeclaration) -> List[str]:
         name = decl.name
         typename = self.canonicalize_type(decl.type)
         try:
@@ -607,7 +609,7 @@ class CxxGenerator(Generator):
             return [f'{typename} mndr_{name};\n']
         return [f'{typename} mndr_{name} = {"".join(self.generate_expression(decl.init_value))};\n']
 
-    def is_default_constructible(self, typename):
+    def is_default_constructible(self, typename: an.Typename) -> bool:
         # XXX: STUB!
         return True
 
