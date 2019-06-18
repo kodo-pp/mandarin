@@ -1,5 +1,8 @@
+class Foo
+    def foo()
+        print(3)
+    end
+end
+
 def main()
-    foo = 5
-    foo = 6
-    (foo + 4) = 8
 end

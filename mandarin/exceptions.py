@@ -164,6 +164,14 @@ class AssignmentToRvalue(SemanticalError):
     description = 'Assignment to a Rvalue'
     
 
+class SelfUsedOutsideClass(SemanticalError):
+    def __init__(self, posinfo):
+        msg = f'Self can only be used in class methods'
+        super().__init__(posinfo=posinfo, message=msg)
+
+    description = 'Self used outside the class'
+    
+
 
 def warn(w, formatter):
     # STUB!

@@ -243,16 +243,17 @@ class Context(object):
 
 
     class PushHolder(object):
-        __slots__ = ['parent']
+        __slots__ = ['on_enter', 'on_exit']
 
-        def __init__(self, parent):
-            self.parent = parent
+        def __init__(self, on_enter, on_exit):
+            self.on_enter = on_enter
+            self.on_exit = on_exit
 
         def __enter__(self):
-            self.parent.raw_push()
+            self.on_enter()
         
         def __exit__(self, *args):
-            self.parent.raw_pop()
+            self.on_exit()
 
 
     class StackEmptyError(Exception):
@@ -263,11 +264,41 @@ class Context(object):
             return '`Context` object: stack is empty but a frame was requested'
 
 
-    __slots__ = ['function', 'stack']
+    class NestedClassError(Exception):
+        def __init__(self):
+            super().__init__(self)
+
+        def __str__(self):
+            return '`Context` object: nested class was entered, which is not supported'
+
+
+    class NoClassError(Exception):
+        def __init__(self):
+            super().__init__(self)
+
+        def __str__(self):
+            return '`Context` object: class exited when there was no class'
+
+
+    __slots__ = ['function', 'stack', '_in_class']
 
     def __init__(self):
         self.function = None
         self.stack = [Context.Frame()]
+        self._in_class = False
+    
+    def is_in_class(self):
+        return self._in_class
+    
+    def _enter_class(self):
+        if self._in_class:
+            raise Context.NestedClassError()
+        self._in_class = True
+
+    def _exit_class(self):
+        if not self._in_class:
+            raise Context.NoClassError()
+        self._in_class = False
 
     @typechecked
     def maybe_add_variable(self, name: str, var: an.VariableDeclaration) -> bool:
@@ -299,14 +330,17 @@ class Context(object):
     def has_variable(self, name: str) -> bool:
         return self.maybe_get_variable(name) is not None
 
-    def raw_push(self):
+    def _raw_push(self):
         self.stack.append(Context.Frame())
 
-    def raw_pop(self):
+    def _raw_pop(self):
         self.stack.pop()
 
     def push(self):
-        return self.PushHolder(parent=self)
+        return Context.PushHolder(on_enter=self._raw_push, on_exit=self._raw_pop)
+
+    def push_class(self):
+        return Context.PushHolder(on_enter=self._enter_class, on_exit=self._exit_class)
 
 
 class CxxGenerator(Generator):
@@ -359,18 +393,19 @@ class CxxGenerator(Generator):
         if cd.is_native:
             return []
         name = cd.name
-        outer_buf = []
-        outer_buf.append('class mndr_{} : public mandarin::support::Object {{\n'.format(name))
-        outer_buf.append('public:\n')
-        buf: List[str] = []
-        for md in cd.method_decls:
-            buf += self.generate_method_declaration(md, cd)
-        for member in cd.members:
-            typename = self.canonicalize_type(member.type);
-            buf.append(f'    {typename} mndr_{member.name.split(".")[-1]};\n')
-        outer_buf += buf
-        outer_buf.append('};\n')
-        return outer_buf
+        with self.context.push_class():
+            outer_buf = []
+            outer_buf.append('class mndr_{} : public mandarin::support::Object {{\n'.format(name))
+            outer_buf.append('public:\n')
+            buf: List[str] = []
+            for md in cd.method_decls:
+                buf += self.generate_method_declaration(md, cd)
+            for member in cd.members:
+                typename = self.canonicalize_type(member.type);
+                buf.append(f'    {typename} mndr_{member.name.split(".")[-1]};\n')
+            outer_buf += buf
+            outer_buf.append('};\n')
+            return outer_buf
 
     @typechecked
     def generate_method_declaration(self, md: an.FunctionDeclaration, cd: an.ClassDefinition) -> List[str]:
@@ -446,24 +481,30 @@ class CxxGenerator(Generator):
 
     @typechecked
     def generate_function_definition(self, fd: an.FunctionDefiniton) -> List[str]:
-        function_name = fd.decl.name
-        buf = []
-        return_type = fd.decl.return_type
-        canonical_return_type = self.canonicalize_type(return_type)
-        buf.append(f'{canonical_return_type} mndr_{function_name}(')
-        buf += self.generate_function_arguments(fd.decl)
-        with self.context.push():
-            for arg in fd.decl.arguments:
-                decl = an.VariableDeclaration(
-                    posinfo = arg.posinfo,
-                    type = arg.type,
-                    name = arg.name,
-                )
-                self.context.add_variable(arg.name, decl)
-            buf.append(') {\n');
-            buf += self.generate_code_block(fd.body)
-            buf.append('}\n');
-            return buf
+        function_name = fd.decl.name.replace('.', '::')
+        if '::' in function_name:
+            ctx = self.context.push_class()
+        else:
+            noop = lambda: None
+            ctx = Context.PushHolder(noop, noop)
+        with ctx:
+            buf = []
+            return_type = fd.decl.return_type
+            canonical_return_type = self.canonicalize_type(return_type)
+            buf.append(f'{canonical_return_type} mndr_{function_name}(')
+            buf += self.generate_function_arguments(fd.decl)
+            with self.context.push():
+                for arg in fd.decl.arguments:
+                    decl = an.VariableDeclaration(
+                        posinfo = arg.posinfo,
+                        type = arg.type,
+                        name = arg.name,
+                    )
+                    self.context.add_variable(arg.name, decl)
+                buf.append(') {\n');
+                buf += self.generate_code_block(fd.body)
+                buf.append('}\n');
+                return buf
 
     @typechecked
     def generate_code_block(self, block: List[an.Node]) -> List[str]:
@@ -527,6 +568,8 @@ class CxxGenerator(Generator):
     @typechecked
     def generate_identifier_expression(self, expr: an.IdentifierExpression) -> List[str]:
         if expr.name == 'self':
+            if not self.context.is_in_class():
+                raise exc.SelfUsedOutsideClass(posinfo=expr.posinfo)
             return ['this']
         if not self.context.has_variable(expr.name):
             raise exc.UndeclaredVariable(posinfo=expr.posinfo, name=expr.name)
