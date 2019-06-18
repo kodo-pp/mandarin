@@ -541,11 +541,16 @@ class CxxGenerator(Generator):
     
     @typechecked
     def generate_while_loop(self, stmt: an.WhileLoop) -> List[str]:
-        return ['/* Stub while loop */']
+        buf = ['while (']
+        buf += self.generate_expression(stmt.condition)
+        buf += [') {\n']
+        buf += self.generate_code_block(stmt.body)
+        buf += ['}\n']
+        return buf
     
     @typechecked
     def generate_function_return(self, stmt: an.FunctionReturn) -> List[str]:
-        return ['/* Stub function return */']
+        return ['return '] + self.generate_expression(stmt.expr) + [';\n']
 
     @typechecked
     def generate_expression(self, expr: an.Expression) -> List[str]:
@@ -711,7 +716,8 @@ class CxxGenerator(Generator):
                 if stmt.operator != '=':
                     # All other operators make it assignment-only statement, not a combined decl+assign one
                     raise exc.UndeclaredVariable(posinfo=stmt.posinfo, name=stmt.name)
-                typename = self.canonicalize_type(stmt.expr.get_type())
+                typename = stmt.expr.get_type()
+                typename_c = self.canonicalize_type(typename)
                 self.context.add_variable(
                     name = name,
                     var = an.VariableDeclaration(
@@ -723,9 +729,9 @@ class CxxGenerator(Generator):
                 )
                 return [
                     '{} {} = mandarin::support::cast_to<{}>({});\n'.format(
-                        typename,
+                        typename_c,
                         ''.join(self.generate_expression(lhs)),
-                        typename,
+                        typename_c,
                         ''.join(self.generate_expression(stmt.expr)),
                     )
                 ]

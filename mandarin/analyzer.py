@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from typing import Any, List, Union, Generator, Optional, Tuple
 
 from . import exceptions as exc
 from . import posinfo as pi
@@ -21,13 +22,18 @@ from . import posinfo as pi
 import lark
 
 
+from typeguard import typechecked
+
+
 class Node(object):
-    def __init__(self, posinfo):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo):
         self.posinfo = posinfo
 
 
 class Typename(object):
-    def __init__(self, name, lvalue=False):
+    @typechecked
+    def __init__(self, name: str, lvalue: bool = False):
         self.name = name
         self.lvalue = lvalue
 
@@ -38,8 +44,20 @@ class Typename(object):
         return 'Typename({}{})'.format('Lvalue ' if self.lvalue else '', self.name)
 
 
+class Expression(Node):
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return 'Expr ???'
+
+    def get_type(self):
+        raise NotImplementedError()
+
+
 class FunctionArgument(Node):
-    def __init__(self, posinfo, name, type):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, name: str, type: Typename):
         super().__init__(posinfo)
         self.name = name
         self.type = type
@@ -49,7 +67,8 @@ class FunctionArgument(Node):
 
 
 class FunctionDeclaration(Node):
-    def __init__(self, posinfo, name, return_type, arguments):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, name: str, return_type: Typename, arguments: List[FunctionArgument]):
         super().__init__(posinfo)
         self.name = name
         self.return_type = return_type
@@ -64,32 +83,30 @@ class FunctionDeclaration(Node):
             repr(self.return_type),
             repr(self.arguments),
         )
+        
 
-
-class ClassDefinition(Node):
-    def __init__(self, posinfo, is_native, name, members, method_decls, method_defs):
+class VariableDeclaration(Node):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, type: Typename, name: str, init_value: Optional[Expression] = None):
         super().__init__(posinfo)
+        self.type = type
         self.name = name
-        self.members = members
-        self.method_decls = method_decls
-        self.method_defs = method_defs
-        self.is_native = is_native
-    
+        self.init_value = init_value
+
     def __str__(self):
         return repr(self)
-
+    
     def __repr__(self):
-        return 'Class{}(name: {}, members: {}, methods: (decls: {}, defs: {}))'.format(
-            ' native' if self.is_native else '',
+        return 'VarDeclaration(var: {}, type: {}{})'.format(
             self.name,
-            [repr(x) for x in self.members],
-            [repr(x) for x in self.method_decls],
-            [repr(x) for x in self.method_defs],
+            repr(self.type),
+            ', init: {}'.format(repr(self.init_value)) if self.init_value is not None else '',
         )
 
 
 class FunctionDefiniton(Node):
-    def __init__(self, posinfo, decl, body):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, decl: FunctionDeclaration, body: List[Node]):
         super().__init__(posinfo)
         self.decl = decl
         self.body = body
@@ -101,19 +118,9 @@ class FunctionDefiniton(Node):
         return 'FunctionDefiniton(decl: {}, body: {})'.format(repr(self.decl), repr(self.body))
 
 
-class Expression(Node):
-    def __str__(self):
-        return repr(self)
-
-    def __repr__(self):
-        return 'Expr ???'
-
-    def get_type(self):
-        raise NotImplementedError()
-
-
 class StubExpression(Expression):
-    def __init__(self, posinfo, node):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, node: Union[lark.tree.Tree, lark.lexer.Token]):
         super().__init__(posinfo)
         self.node = node
 
@@ -128,7 +135,8 @@ class StubExpression(Expression):
 
 
 class IdentifierExpression(Expression):
-    def __init__(self, posinfo, name, typename):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, name: str, typename: Typename):
         super().__init__(posinfo)
         self.name = name
         self.typename = typename
@@ -144,17 +152,20 @@ class IdentifierExpression(Expression):
 
 
 # TODO: move these to Analyzer
-def deduce_type_binop(op, left, right):
+@typechecked
+def deduce_type_binop(op: str, left: Typename, right: Typename) -> Typename:
     # STUB!
     return Typename('var')
 
 
-def deduce_type_unop(op, argt):
+@typechecked
+def deduce_type_unop(op: str, argt: Typename) -> Typename:
     # STUB!
     return Typename('var')
 
 
-def deduce_call_type(func, args):
+@typechecked
+def deduce_call_type(func: Expression, args: List[Expression]) -> Typename:
     # STUB!
     callable_type = func.get_type()
     if callable_type.name == 'var':
@@ -171,14 +182,16 @@ def deduce_call_type(func, args):
     return Typename('var')
 
 
-def deduce_type_property(objt, prop):
+@typechecked
+def deduce_type_property(objt: Typename, prop: str) -> Typename:
     # STUB!
     is_lvalue = objt.lvalue
     return Typename('var', lvalue=is_lvalue)
 
 
 class BinaryOperatorExpression(Expression):
-    def __init__(self, posinfo, op, lhs, rhs):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, op: str, lhs: Expression, rhs: Expression):
         super().__init__(posinfo)
         self.op = op
         self.lhs = lhs
@@ -192,7 +205,8 @@ class BinaryOperatorExpression(Expression):
             repr(self.rhs),
         )
 
-    def get_type(self):
+    @typechecked
+    def get_type(self) -> Typename:
         # TODO: move to constructor, return already computed value
         lt = self.lhs.get_type()
         rt = self.lhs.get_type()
@@ -200,7 +214,8 @@ class BinaryOperatorExpression(Expression):
 
 
 class UnaryOperatorExpression(Expression):
-    def __init__(self, posinfo, op, arg):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, op: str, arg: Expression):
         super().__init__(posinfo)
         self.op = op
         self.arg = arg
@@ -212,14 +227,16 @@ class UnaryOperatorExpression(Expression):
             repr(self.arg),
         )
 
-    def get_type(self):
+    @typechecked
+    def get_type(self) -> Typename:
         # TODO: move to constructor, return already computed value
         argt = self.arg.get_type()
         return deduce_type_unop(op=self.op, argt=argt)
 
 
 class PropertyExpression(Expression):
-    def __init__(self, posinfo, obj, prop):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, obj: Expression, prop: str):
         super().__init__(posinfo)
         self.obj = obj
         self.prop = prop
@@ -231,14 +248,16 @@ class PropertyExpression(Expression):
             repr(self.prop),
         )
 
-    def get_type(self):
+    @typechecked
+    def get_type(self) -> Typename:
         # TODO: move to constructor, return already computed value
         objt = self.obj.get_type()
         return deduce_type_property(objt=objt, prop=self.prop)
 
 
 class FunctionCallExpression(Expression):
-    def __init__(self, posinfo, func, args):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, func: Expression, args: List[Expression]):
         super().__init__(posinfo)
         self.func = func
         self.args = args
@@ -250,13 +269,15 @@ class FunctionCallExpression(Expression):
             ', '.join(map(repr, self.args)),
         )
 
-    def get_type(self):
+    @typechecked
+    def get_type(self) -> Typename:
         # TODO: move to constructor, return already computed value
         return deduce_call_type(func=self.func, args=self.args)
 
 
 class LiteralExpression(Expression):
-    def __init__(self, posinfo, value):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, value: Any):
         super().__init__(posinfo)
         self.value = value
 
@@ -267,7 +288,8 @@ class LiteralExpression(Expression):
             repr(self.value),
         )
 
-    def get_type(self):
+    @typechecked
+    def get_type(self) -> Typename:
         return self.typename
 
     typename = Typename('var')
@@ -285,7 +307,8 @@ class IntegerExpression(LiteralExpression):
 
 
 class VariableAssignment(Node):
-    def __init__(self, posinfo, lhs, operator, expr):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, lhs: Expression, operator: str, expr: Expression):
         super().__init__(posinfo)
         self.lhs = lhs
         self.operator = operator
@@ -300,28 +323,11 @@ class VariableAssignment(Node):
             repr(self.operator),
             repr(self.expr),
         )
-        
-
-class VariableDeclaration(Node):
-    def __init__(self, posinfo, type, name, init_value=None):
-        super().__init__(posinfo)
-        self.type = type
-        self.name = name
-        self.init_value = init_value
-
-    def __str__(self):
-        return repr(self)
-    
-    def __repr__(self):
-        return 'VarDeclaration(var: {}, type: {}{})'.format(
-            self.name,
-            repr(self.type),
-            ', init: {}'.format(repr(self.init_value)) if self.init_value is not None else '',
-        )
 
 
 class WhileLoop(Node):
-    def __init__(self, posinfo, condition, body):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, condition: Expression, body: List[Node]):
         super().__init__(posinfo)
         self.condition = condition
         self.body = body
@@ -337,7 +343,8 @@ class WhileLoop(Node):
 
 
 class ForLoop(Node):
-    def __init__(self, posinfo, variable, expression, body):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, variable: str, expression: Expression, body: List[Node]):
         super().__init__(posinfo)
         self.variable = variable
         self.expression = expression
@@ -355,7 +362,15 @@ class ForLoop(Node):
 
 
 class IfStatement(Node):
-    def __init__(self, posinfo, condition, true_branch, false_branch, alternatives):
+    @typechecked
+    def __init__(
+        self,
+        posinfo: pi.Posinfo,
+        condition: Expression,
+        true_branch: List[Node],
+        false_branch: Optional[List[Node]],
+        alternatives: List[Tuple[Expression, List[Node]]],
+    ):
         super().__init__(posinfo)
         self.condition = condition
         self.true_branch = true_branch
@@ -376,7 +391,8 @@ class IfStatement(Node):
 
 
 class FunctionReturn(Node):
-    def __init__(self, posinfo, expr):
+    @typechecked
+    def __init__(self, posinfo: pi.Posinfo, expr: Expression):
         super().__init__(posinfo)
         self.expr = expr
 
@@ -387,12 +403,45 @@ class FunctionReturn(Node):
         return 'FunctionReturn({})'.format(self.expr)
 
 
+class ClassDefinition(Node):
+    @typechecked
+    def __init__(
+        self,
+        posinfo: pi.Posinfo,
+        is_native: bool,
+        name: str,
+        members: List[VariableDeclaration],
+        method_decls: List[FunctionDeclaration],
+        method_defs: List[FunctionDefiniton],
+    ):
+        super().__init__(posinfo)
+        self.name = name
+        self.members = members
+        self.method_decls = method_decls
+        self.method_defs = method_defs
+        self.is_native = is_native
+    
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return 'Class{}(name: {}, members: {}, methods: (decls: {}, defs: {}))'.format(
+            ' native' if self.is_native else '',
+            self.name,
+            [repr(x) for x in self.members],
+            [repr(x) for x in self.method_decls],
+            [repr(x) for x in self.method_defs],
+        )
+
+
 class Analyzer(object):
-    def __init__(self, ast, filename=None):
+    @typechecked
+    def __init__(self, ast: lark.tree.Tree, filename: Optional[str] = None):
         self.ast = ast
         self.filename = filename
 
-    def get_function_declarations(self):
+    @typechecked
+    def get_function_declarations(self) -> Generator[FunctionDeclaration, None, None]:
         for node in self.ast.children:
             if isinstance(node, lark.tree.Tree) \
                     and node.data in ['native_function_declaration', 'function_definition']:
@@ -401,22 +450,23 @@ class Analyzer(object):
             for mdecl in i.method_decls:
                 yield mdecl
 
-    def get_function_definitions(self):
+    @typechecked
+    def get_function_definitions(self) -> Generator[FunctionDefiniton, None, None]:
         for node in self.ast.children:
             if isinstance(node, lark.tree.Tree) and node.data == 'function_definition':
                 yield self.parse_function_definition(node)
         for i in self.get_class_definitions():
             for mdef in i.method_defs:
                 yield mdef
-            
 
-    def get_class_definitions(self):
+    @typechecked
+    def get_class_definitions(self) -> Generator[ClassDefinition, None, None]:
         for node in self.ast.children:
             if isinstance(node, lark.tree.Tree) and node.data == 'class_definition':
                 yield self.parse_class_definition(node)
 
-
-    def parse_class_definition(self, node):
+    @typechecked
+    def parse_class_definition(self, node: lark.tree.Tree) -> ClassDefinition:
         # class_definition: (0) KW_CLASS (1?) KW_NATIVE? (-2) IDENTIFIER _NL (-1) class_block_end
         # class_block_end: class_statement* KW_END
         assert isinstance(node, lark.tree.Tree)
@@ -455,7 +505,10 @@ class Analyzer(object):
             method_defs = mdefs,
         )
 
-    def parse_class_statement(self, node, prefix):
+    @typechecked
+    def parse_class_statement(self, node: lark.tree.Tree, prefix: str) -> Union[
+        FunctionDeclaration, FunctionDefiniton, VariableDeclaration
+    ]:
         assert isinstance(node, lark.tree.Tree)
         assert node.data in {'function_definition', 'native_function_declaration', 'var_declaration'}
         if node.data == 'native_function_declaration':
@@ -466,7 +519,8 @@ class Analyzer(object):
             # node.data == 'var_declaration'
             return self.parse_var_declaration(node, prefix=prefix)
 
-    def parse_function_definition(self, node, *, prefix=''):
+    @typechecked
+    def parse_function_definition(self, node: lark.tree.Tree, *, prefix: str = '') -> FunctionDefiniton:
         # function_definition: (0) KW_DEF (1) IDENTIFIER "(" (2) typed_arglist ")" (x) _NL (3) code_block_end
         # typed_arglist: (typed_arg ("," typed_arg)* ","?)?
         # typed_arg: typename? IDENTIFIER
@@ -490,7 +544,8 @@ class Analyzer(object):
         )
         return FunctionDefiniton(posinfo=posinfo, decl=decl, body=body)
     
-    def parse_code_block(self, cb_node):
+    @typechecked
+    def parse_code_block(self, cb_node: lark.tree.Tree) -> List[Node]:
         # code_block_<***>: code_statement* KW_<***>
         # <***> in [end, else, elif]
         assert isinstance(cb_node, lark.tree.Tree)
@@ -507,7 +562,8 @@ class Analyzer(object):
         statements = cb_node.children[:-1]
         return [self.parse_code_statement(st) for st in statements]
 
-    def parse_code_statement(self, statement):
+    @typechecked
+    def parse_code_statement(self, statement: lark.tree.Tree) -> Node:
         # ?code_statement: (expression
         #     | var_declaration
         #     | var_assignment
@@ -530,9 +586,10 @@ class Analyzer(object):
         elif statement.data == 'return_statement':
             return self.parse_return(statement)
         else:
-            assert False, 'Unknown code statement: {}'.format(statement.data)
+            raise exc.InternalError('Unknown code statement: {}'.format(statement.data))
             
-    def parse_return(self, statement):
+    @typechecked
+    def parse_return(self, statement: lark.tree.Tree) -> FunctionReturn:
         # return_statement: KW_RETURN expression
         assert isinstance(statement, lark.tree.Tree)
         assert len(statement.children) == 2
@@ -542,7 +599,8 @@ class Analyzer(object):
             expr = self.parse_expression(statement.children[1]),
         )
 
-    def parse_var_declaration(self, node, *, prefix=''):
+    @typechecked
+    def parse_var_declaration(self, node: lark.tree.Tree, *, prefix: str = '') -> VariableDeclaration:
         # var_declaration: typename IDENTIFIER (strict_assignment_op expression)?
         assert isinstance(node, lark.tree.Tree)
         type = self.parse_typename(node.children[0])
@@ -557,8 +615,9 @@ class Analyzer(object):
             name = prefix + name,
             init_value = value,
         )
-            
-    def parse_var_assignment(self, node):
+
+    @typechecked
+    def parse_var_assignment(self, node: lark.tree.Tree) -> VariableAssignment:
         # var_assignment: front_atomic_expression assignment_op expression
         assert isinstance(node, lark.tree.Tree)
         assert len(node.children) == 3
@@ -577,14 +636,16 @@ class Analyzer(object):
             expr = expr,
         )
 
-    def parse_operator(self, node):
+    @typechecked
+    def parse_operator(self, node: lark.tree.Tree) -> str:
         assert isinstance(node, lark.tree.Tree)
         assert all([isinstance(x, lark.lexer.Token) for x in node.children]) or len(node.children) == 1
         if len(node.children) == 1 and isinstance(node.children[0], lark.tree.Tree):
             return self.parse_operator(node.children[0])
         return ''.join([x.value for x in node.children])
 
-    def parse_if_statement(self, node):
+    @typechecked
+    def parse_if_statement(self, node: lark.tree.Tree) -> IfStatement:
         # if_statement: KW_IF expression _NL (code_block_elif expression _NL)* ...
         # ... (code_block_else _NL)? code_block_end
         assert isinstance(node, lark.tree.Tree)
@@ -616,21 +677,23 @@ class Analyzer(object):
             alternatives = alternatives,
         )
 
-    def parse_for_statement(self, node):
+    @typechecked
+    def parse_for_statement(self, node: lark.tree.Tree) -> ForLoop:
         # for_statement: KW_FOR IDENTIFIER KW_IN expression _NL code_block_end
         assert isinstance(node, lark.tree.Tree)
         assert len(node.children) == 5
         var = node.children[1].value
-        expr = self.parse_expression(node.children[3])
-        cb = self.parse_code_block(node.children[4])
+        expr = node.children[3]
+        cb = node.children[4]
         return ForLoop(
             posinfo = pi.from_lark(filename=self.filename, node=node),
             variable = var,
-            expression = expr,
-            body = cb,
+            expression = self.parse_expression(expr),
+            body = self.parse_code_block(cb),
         )
             
-    def parse_while_statement(self, node):
+    @typechecked
+    def parse_while_statement(self, node: lark.tree.Tree) -> WhileLoop:
         # while_statement: KW_WHILE expression _NL code_block_end
         assert isinstance(node, lark.tree.Tree)
         assert len(node.children) == 3
@@ -638,11 +701,12 @@ class Analyzer(object):
         cb = node.children[2]
         return WhileLoop(
             posinfo = pi.from_lark(filename=self.filename, node=node),
-            condition = expr,
-            body = cb,
+            condition = self.parse_expression(expr),
+            body = self.parse_code_block(cb),
         )
             
-    def parse_expression(self, node):
+    @typechecked
+    def parse_expression(self, node: lark.tree.Tree) -> Expression:
         assert isinstance(node, lark.tree.Tree)
         if node.data == 'expression' or node.data == 'expression_nl':
             assert len(node.children) == 1
@@ -660,7 +724,8 @@ class Analyzer(object):
             rhs = rhs,
         )
 
-    def parse_atomic_expression(self, node):
+    @typechecked
+    def parse_atomic_expression(self, node: lark.tree.Tree) -> Expression:
         # FIXME: loops on old_tests/parser/006-unary-operators.man
         assert isinstance(node, lark.tree.Tree)
         assert node.data == 'front_atomic_expression'
@@ -673,7 +738,8 @@ class Analyzer(object):
             )
         return atom
 
-    def parse_pure_atomic_expression(self, node):
+    @typechecked
+    def parse_pure_atomic_expression(self, node: lark.tree.Tree) -> Expression:
         # ?atomic_expression: [1] literal | [2] symbol | [3] "(" expression ")" | [4] function_call | [5] property
         assert isinstance(node, lark.tree.Tree)
         if node.data == 'literal':
@@ -692,7 +758,8 @@ class Analyzer(object):
             assert node.data == 'property'
             return self.parse_property(node)
 
-    def parse_property(self, node):
+    @typechecked
+    def parse_property(self, node: lark.tree.Tree) -> PropertyExpression:
         assert isinstance(node, lark.tree.Tree)
         assert len(node.children) == 3
         obj = self.parse_pure_atomic_expression(node.children[0])
@@ -703,7 +770,8 @@ class Analyzer(object):
             prop = prop,
         )
 
-    def parse_literal(self, node):
+    @typechecked
+    def parse_literal(self, node: lark.tree.Tree) -> LiteralExpression:
         # literal: NUMBER | STRING_SINGLE | STRING_DOUBLE
         assert isinstance(node, lark.tree.Tree)
         assert len(node.children) == 1
@@ -723,11 +791,13 @@ class Analyzer(object):
         else:
             assert False, 'Unknown literal type: {}'.format(lit.type)
 
-    def unescape_string(self, string):
+    @typechecked
+    def unescape_string(self, string: str) -> str:
         # STUB!
         return string
 
-    def parse_function_call(self, node):
+    @typechecked
+    def parse_function_call(self, node: lark.tree.Tree) -> FunctionCallExpression:
         # function_call: atomic_expression call_operator
         assert isinstance(node, lark.tree.Tree)
         assert node.data == 'function_call'
@@ -740,13 +810,15 @@ class Analyzer(object):
             args = args,
         )
 
-    def parse_call_operator(self, node):
+    @typechecked
+    def parse_call_operator(self, node: lark.tree.Tree) -> List[Expression]:
         # call_operator: "(" (expression ("," expression)*)? ")"
         assert isinstance(node, lark.tree.Tree)
         assert node.data == 'call_operator'
         return [self.parse_expression(x) for x in node.children]
 
-    def get_variable(self, var_token):
+    @typechecked
+    def get_variable(self, var_token: lark.lexer.Token) -> IdentifierExpression:
         assert isinstance(var_token, lark.lexer.Token)
         assert var_token.type == 'IDENTIFIER'
         return IdentifierExpression(
@@ -755,7 +827,8 @@ class Analyzer(object):
             typename = Typename('var', lvalue=True),
         )
 
-    def parse_function_declaration(self, node, *, prefix=''):
+    @typechecked
+    def parse_function_declaration(self, node: lark.tree.Tree, *, prefix: str = '') -> FunctionDeclaration:
         # native_function_declaration: (0) KW_DEF (1) KW_NATIVE (2) IDENTIFIER "(" (3) typed_arglist ")"
         # typed_arglist: (typed_arg ("," typed_arg)* ","?)?
         # typed_arg: typename? IDENTIFIER
@@ -777,10 +850,12 @@ class Analyzer(object):
             arguments = arguments,
         )
 
-    def is_native(self, node):
+    @typechecked
+    def is_native(self, node: lark.tree.Tree) -> bool:
         return isinstance(node.children[1], lark.lexer.Token) and node.children[1].type == 'KW_NATIVE'
 
-    def parse_typed_arglist(self, arglist):
+    @typechecked
+    def parse_typed_arglist(self, arglist: lark.tree.Tree) -> Generator[FunctionArgument, None, None]:
         assert isinstance(arglist, lark.tree.Tree)
         for argnode in arglist.children:
             if isinstance(argnode, lark.tree.Tree) and argnode.data.startswith('typed_arg'):
@@ -796,7 +871,8 @@ class Analyzer(object):
                     type = type,
                 )
     
-    def parse_typename(self, node):
+    @typechecked
+    def parse_typename(self, node: lark.tree.Tree) -> Typename:
         assert isinstance(node, lark.tree.Tree)
         assert node.data == 'typename'
         assert len(node.children) == 1
