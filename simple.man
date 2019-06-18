@@ -1,7 +1,5 @@
 def main()
-    x = 0
-    while x < 5
-        print(x)
-        x += 1
+    for i in 0..10
+        print(i)
     end
 end

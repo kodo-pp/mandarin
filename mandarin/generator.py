@@ -15,6 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import abc
+import copy
 from typing import List, Optional, Set, Tuple
 
 from . import analyzer as an
@@ -537,7 +538,29 @@ class CxxGenerator(Generator):
     
     @typechecked
     def generate_for_loop(self, stmt: an.ForLoop) -> List[str]:
-        return ['/* Stub for loop */']
+        buf = [f'for (auto mndriter_{stmt.variable} = (']
+        buf += self.generate_expression(stmt.expression)
+        buf += [')->mndr___iterator__(); ']
+        buf += [f'!mndriter_{stmt.variable}->mndr___is_iteration_finished__(); ']
+        buf += [f'mndriter_{stmt.variable}->mndr___inplace_next__()) {{\n']
+        buf += self.indenter.indent([
+            f'auto& mndr_{stmt.variable} = mndriter_{stmt.variable}->mndr___element__();\n'
+        ])
+        with self.context.push():
+            vd = an.VariableDeclaration(
+                posinfo = stmt.posinfo,
+                name = stmt.variable,
+                type = self.deduce_iter_element_type(stmt.expression.get_type(), lvalue=True),
+            )
+            self.context.add_variable(name = stmt.variable, var = vd)
+            buf += self.generate_code_block(stmt.body)
+        buf += '}\n'
+        return buf
+
+    @typechecked
+    def deduce_iter_element_type(self, iterable_type: an.Typename, lvalue=False):
+        # Stub!
+        return an.Typename('var', lvalue=lvalue)
     
     @typechecked
     def generate_while_loop(self, stmt: an.WhileLoop) -> List[str]:
