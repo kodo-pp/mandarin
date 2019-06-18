@@ -7,3 +7,6 @@ end
 
 class native Str
 end
+
+class native Float
+end
