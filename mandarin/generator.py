@@ -98,7 +98,7 @@ class Generator(object):
 
     @typechecked
     def is_special_identifier(self, name: str) -> bool:
-        return name == 'self'
+        return name in ['self', 'true', 'false', 'none', 'var']
 
     @typechecked
     def generate(self) -> str:
@@ -534,7 +534,22 @@ class CxxGenerator(Generator):
     
     @typechecked
     def generate_if_statement(self, stmt: an.IfStatement) -> List[str]:
-        return ['/* Stub if statement */']
+        buf = ['if (']
+        buf += self.generate_expression(stmt.condition)
+        buf += [') {\n']
+        buf += self.generate_code_block(stmt.true_branch)
+        buf += ['}']
+        for cond, body in stmt.alternatives:
+            buf += [' else if (']
+            buf += self.generate_expression(cond)
+            buf += [') {\n']
+            buf += self.generate_code_block(body)
+            buf += ['}']
+        if stmt.false_branch is not None:
+            buf += [' else {']
+            buf += self.generate_code_block(stmt.false_branch)
+        buf += ['\n']
+        return buf
     
     @typechecked
     def generate_for_loop(self, stmt: an.ForLoop) -> List[str]:
@@ -618,6 +633,12 @@ class CxxGenerator(Generator):
             if not self.context.is_in_class():
                 raise exc.SelfUsedOutsideClass(posinfo=expr.posinfo)
             return ['this']
+        elif expr.name in ['true', 'false', 'none']:
+            return [f'mandarin::support::value_of_{expr.name}']
+        elif expr.name == 'var':
+            raise exc.VarUsedAsIdentifier(posinfo=expr.posinfo)
+
+        assert not self.is_special_identifier(expr.name)
         if not self.context.has_variable(expr.name):
             raise exc.UndeclaredVariable(posinfo=expr.posinfo, name=expr.name)
         return [f'mndr_{expr.name}']

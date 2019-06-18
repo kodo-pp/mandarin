@@ -212,3 +212,11 @@ def test_inv_027():
 
 def test_inv_028():
     _test_parses('./test_files/invalid/028-self-outside-class.man', expect=False)
+
+
+def test_inv_029():
+    _test_parses('./test_files/invalid/029-var-as-identifier.man', expect=False)
+
+
+def test_inv_030():
+    _test_parses('./test_files/invalid/030-true-as-identifier.man', expect=False)

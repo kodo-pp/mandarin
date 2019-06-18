@@ -171,6 +171,13 @@ class SelfUsedOutsideClass(SemanticalError):
 
     description = 'Self used outside the class'
     
+    
+class VarUsedAsIdentifier(SemanticalError):
+    def __init__(self, posinfo):
+        msg = f'`var` vannot be used as an identifier'
+        super().__init__(posinfo=posinfo, message=msg)
+
+    description = 'Var used as an identifier'
 
 
 def warn(w, formatter):
