@@ -1,4 +1,4 @@
-def native foo(x, int y)
+def native foo(x, Int y)
 def native bar()
 def native baz(a, b, c)
 

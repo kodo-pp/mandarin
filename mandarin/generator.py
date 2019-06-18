@@ -402,7 +402,7 @@ class CxxGenerator(Generator):
             for md in cd.method_decls:
                 buf += self.generate_method_declaration(md, cd)
             for member in cd.members:
-                typename = self.canonicalize_type(member.type);
+                typename = self.canonicalize_type(member.type, member.posinfo);
                 buf.append(f'    {typename} mndr_{member.name.split(".")[-1]};\n')
             outer_buf += buf
             outer_buf.append('};\n')
@@ -415,7 +415,7 @@ class CxxGenerator(Generator):
         buf = []
         if has_typename:
             return_type = md.return_type
-            canonical_return_type = self.canonicalize_type(return_type)
+            canonical_return_type = self.canonicalize_type(return_type, md.posinfo)
             buf.append(f'    virtual {canonical_return_type} mndr_{canonical_method_name}(')
         else:
             buf.append(f'    virtual void mndr_{canonical_method_name}(')
@@ -435,16 +435,19 @@ class CxxGenerator(Generator):
             return True, raw_name
 
     @typechecked
-    def canonicalize_type(self, typename: an.Typename) -> str:
+    def canonicalize_type(self, typename: an.Typename, posinfo) -> str:
         if typename.name == 'var':
             return 'std::shared_ptr<mandarin::support::Object>'
         else:
+            if not self.context.has_variable(typename.name):
+                # STUB!
+                raise exc.UndeclaredVariable(posinfo=posinfo, name=typename.name)
             return f'mandarin::shared_ptr<mandarin::user::mndr_{typename.name}>'
 
     @typechecked
     def generate_function_arguments(self, fd: an.FunctionDeclaration) -> List[str]:
         argument_strings = [
-            f'{self.canonicalize_type(arg.type)} mndr_{arg.name}'
+            f'{self.canonicalize_type(arg.type, arg.posinfo)} mndr_{arg.name}'
             for arg in fd.arguments
         ]
         return [', '.join(argument_strings)]
@@ -463,7 +466,7 @@ class CxxGenerator(Generator):
         function_name = fd.name
         buf = []
         return_type = fd.return_type
-        canonical_return_type = self.canonicalize_type(return_type)
+        canonical_return_type = self.canonicalize_type(return_type, fd.posinfo)
         buf.append(f'{canonical_return_type} mndr_{function_name}(')
         buf += self.generate_function_arguments(fd)
         buf.append(');\n');
@@ -491,7 +494,7 @@ class CxxGenerator(Generator):
         with ctx:
             buf = []
             return_type = fd.decl.return_type
-            canonical_return_type = self.canonicalize_type(return_type)
+            canonical_return_type = self.canonicalize_type(return_type, fd.posinfo)
             buf.append(f'{canonical_return_type} mndr_{function_name}(')
             buf += self.generate_function_arguments(fd.decl)
             with self.context.push():
@@ -534,15 +537,15 @@ class CxxGenerator(Generator):
     
     @typechecked
     def generate_if_statement(self, stmt: an.IfStatement) -> List[str]:
-        buf = ['if (']
+        buf = ['if (mandarin::support::native_bool(']
         buf += self.generate_expression(stmt.condition)
-        buf += [') {\n']
+        buf += [')) {\n']
         buf += self.generate_code_block(stmt.true_branch)
         buf += ['}']
         for cond, body in stmt.alternatives:
-            buf += [' else if (']
+            buf += [' else if (mandarin::support::native_bool(']
             buf += self.generate_expression(cond)
-            buf += [') {\n']
+            buf += [')) {\n']
             buf += self.generate_code_block(body)
             buf += ['}']
         if stmt.false_branch is not None:
@@ -556,7 +559,7 @@ class CxxGenerator(Generator):
         buf = [f'for (auto mndriter_{stmt.variable} = (']
         buf += self.generate_expression(stmt.expression)
         buf += [')->mndr___iterator__(); ']
-        buf += [f'!mndriter_{stmt.variable}->mndr___is_iteration_finished__(); ']
+        buf += [f'!mandarin::support::native_bool(mndriter_{stmt.variable}->mndr___is_iteration_finished__()); ']
         buf += [f'mndriter_{stmt.variable}->mndr___inplace_next__()) {{\n']
         buf += self.indenter.indent([
             f'auto& mndr_{stmt.variable} = mndriter_{stmt.variable}->mndr___element__();\n'
@@ -579,9 +582,9 @@ class CxxGenerator(Generator):
     
     @typechecked
     def generate_while_loop(self, stmt: an.WhileLoop) -> List[str]:
-        buf = ['while (']
+        buf = ['while (mandarin::support::native_bool(']
         buf += self.generate_expression(stmt.condition)
-        buf += [') {\n']
+        buf += [')) {\n']
         buf += self.generate_code_block(stmt.body)
         buf += ['}\n']
         return buf
@@ -761,7 +764,7 @@ class CxxGenerator(Generator):
                     # All other operators make it assignment-only statement, not a combined decl+assign one
                     raise exc.UndeclaredVariable(posinfo=stmt.posinfo, name=stmt.name)
                 typename = stmt.expr.get_type()
-                typename_c = self.canonicalize_type(typename)
+                typename_c = self.canonicalize_type(typename, stmt.expr.posinfo)
                 self.context.add_variable(
                     name = name,
                     var = an.VariableDeclaration(
@@ -786,14 +789,14 @@ class CxxGenerator(Generator):
                 '({})->{}(mandarin::support::cast_to<{}>({}));\n'.format(
                     ''.join(self.generate_expression(lhs)),
                     self.canonicalize_assignment_operator(stmt.operator),
-                    self.canonicalize_type(lhs.get_type()),
+                    self.canonicalize_type(lhs.get_type(), lhs.posinfo),
                     ''.join(self.generate_expression(stmt.expr)),
                 )
             ]
         return [
             '{} = mandarin::support::cast_to<{}>({});\n'.format(
                 ''.join(self.generate_expression(lhs)),
-                self.canonicalize_type(lhs.get_type()),
+                self.canonicalize_type(lhs.get_type(), lhs.posinfo),
                 ''.join(self.generate_expression(stmt.expr)),
             )
         ]
@@ -803,7 +806,7 @@ class CxxGenerator(Generator):
         name = decl.name
         if self.is_special_identifier(name):
             raise exc.SpecialIdentifierDeclared(posinfo=decl.posinfo, name=name)
-        typename = self.canonicalize_type(decl.type)
+        typename = self.canonicalize_type(decl.type, decl.posinfo)
         try:
             self.context.add_variable(name=decl.name, var=decl)
         except Context.VariableAlreadyExists as e:
