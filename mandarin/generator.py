@@ -520,13 +520,32 @@ class CxxGenerator(Generator):
             (an.Expression,             lambda e: self.generate_expression(e) + [';\n']),
             (an.VariableAssignment,     self.generate_variable_assignment),
             (an.VariableDeclaration,    self.generate_variable_declaration),
+            (an.IfStatement,            self.generate_if_statement),
+            (an.ForLoop,                self.generate_for_loop),
+            (an.WhileLoop,              self.generate_while_loop),
+            (an.FunctionReturn,         self.generate_function_return),
         ]
 
         for Type, method in methods:
             if isinstance(stmt, Type):
                 return method(stmt)
-        #raise exc.InternalError(posinfo=stmt.posinfo, message=f'Unknown statement class: {Type.__name__}')
-        return [f'/* Unimplemented (stub) statement type "{type(stmt)}" */\n']
+        raise exc.InternalError(posinfo=stmt.posinfo, message=f'Unknown statement class: {type(stmt).__name__}')
+    
+    @typechecked
+    def generate_if_statement(self, stmt: an.IfStatement) -> List[str]:
+        return ['/* Stub if statement */']
+    
+    @typechecked
+    def generate_for_loop(self, stmt: an.ForLoop) -> List[str]:
+        return ['/* Stub for loop */']
+    
+    @typechecked
+    def generate_while_loop(self, stmt: an.WhileLoop) -> List[str]:
+        return ['/* Stub while loop */']
+    
+    @typechecked
+    def generate_function_return(self, stmt: an.FunctionReturn) -> List[str]:
+        return ['/* Stub function return */']
 
     @typechecked
     def generate_expression(self, expr: an.Expression) -> List[str]:
