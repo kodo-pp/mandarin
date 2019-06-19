@@ -363,6 +363,7 @@ class CxxGenerator(Generator):
             '#include <cstddef>\n',
             '#include <cstdint>\n',
             '#include <memory>\n',
+            '#include <mandarin.hpp>\n',
             'namespace mandarin {namespace user {\n',
         ]
 
