@@ -18,6 +18,7 @@
 import os
 import sys
 import traceback as tb
+from argparse import ArgumentParser
 
 from . import analyzer
 from . import generator
@@ -30,6 +31,33 @@ from .exceptions import UsageError, MandarinError, MandarinSyntaxError
 
 from lark import Lark
 from lark.exceptions import LarkError, UnexpectedToken, UnexpectedCharacters
+
+
+def parse_args():
+    ap = ArgumentParser('mandarin', description='Mandarin compiler')
+    ap.add_argument('--output', '-o', help='Name of the output file. - == stdout (default)', default='-')
+    ap.add_argument('--standalone', '-s', help='Generate standalone code', action='store_true')
+
+    target_names = [t.name for t in targets.targets]
+    ap.add_argument(
+        '--target',
+        '-t',
+        help = 'Target to generate code for (default = cxx)',
+        default = 'cxx',
+        choices = target_names,
+    )
+
+    ap.add_argument('input_filename', help='Name of the source file')
+
+    parsed = ap.parse_args()
+    
+    options = {
+        'output': parsed.output,
+        'input': parsed.input_filename,
+        'is_standalone': parsed.standalone,
+        'target': parsed.target,
+    }
+    return options
 
 
 def run_parser(code, filename=None):
@@ -79,35 +107,19 @@ def read_file(filename):
 
 
 def main():
-    if len(sys.argv) != 3:
-        print('Usage: mandarin <file> <output_file>')
-        sys.exit(1)
-
     try:
-        source_filename = sys.argv[1]
-        output_filename = sys.argv[2]
+        options = parse_args()
         librin_filename = find_librin()
 
-        main_code = read_file(source_filename)
+        main_code = read_file(options['input'])
         librin_code = read_file(librin_filename)
 
-        formatter = fmt.Formatter(filename=source_filename, code=main_code)
+        formatter = fmt.Formatter(filename=options['input'], code=main_code)
         formatter.add_file(filename=librin_filename, code=librin_code)
 
-        main_an = parse_file(source_filename, main_code)
+        main_an = parse_file(options['input'], main_code)
         librin_an = parse_file(librin_filename, librin_code)
 
-
-        #decls = list(an.get_function_declarations())
-        #defs = list(an.get_function_definitions())
-        #print('-- FUNCTION DECLARATIONS --')
-        #print(decls)
-        #print()
-        #print('-- FUNCTION DEFINITIONS --')
-        #print(defs)
-
-        # STUB
-        options = {'is_standalone': True, 'target': 'cxx'}
         try:
             target = targets.select(options['target'])
         except KeyError as e:
@@ -116,10 +128,10 @@ def main():
         gen.import_analyzer(librin_an)
         
         generated_code = gen.generate()
-        if output_filename == '-':
+        if options['output'] == '-':
             print(generated_code)
         else:
-            with open(output_filename, 'w') as f:
+            with open(options['output'], 'w') as f:
                 f.write(generated_code)
     except MandarinError as e:
         formatter.print_compile_error(e)
