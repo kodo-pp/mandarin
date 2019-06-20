@@ -651,13 +651,13 @@ class CxxGenerator(Generator):
     def generate_literal_expression(self, expr: an.LiteralExpression) -> List[str]:
         if isinstance(expr, an.StringExpression):
             return [
-                'std::make_shared<mandarin::user::mndr_Str>({})'.format(
+                'mandarin::support::construct<mandarin::user::mndr_Str>({})'.format(
                     self.escape_string(expr.value, expr.posinfo)
                 )
             ]
         elif isinstance(expr, an.IntegerExpression):
             return [
-                'std::make_shared<mandarin::user::mndr_Int>({} MANDARIN_INTEGER_SUFFIX)'.format(
+                'mandarin::support::construct<mandarin::user::mndr_Int>({} MANDARIN_INTEGER_SUFFIX)'.format(
                     self.check_integer(expr.value, expr.posinfo)
                 )
             ]
