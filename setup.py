@@ -30,4 +30,10 @@ setup(
     tests_require       = ['pytest'],
     setup_requires      = ['pytest-runner'],
     install_requires    = ['lark-parser', 'colorama', 'typeguard'],
+    data_files          = [
+        ('include/mandarin/', ['librin.man']),
+    ],
+    entry_points        = {
+        'console_scripts': ['mandarin=mandarin.__main__:main'],
+    },
 )
