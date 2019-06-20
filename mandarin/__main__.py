@@ -97,8 +97,28 @@ def parse_file(filename, code):
 
 
 def find_librin():
-    # STUB!
-    return 'librin.man'
+    paths = []
+
+    x = os.getenv('LIBRIN_SEARCH_PATH')
+    if x is not None:
+        if os.path.isfile(x) and x.endswith('librin.man'):
+            paths.append(x)
+        elif os.path.isdir(x):
+            paths.append(os.path.join(x, 'librin.man'))
+
+    bindir = os.path.dirname(sys.executable)
+    prefix = os.path.dirname(bindir)
+    paths.append(os.path.join(prefix, 'include', 'mandarin', 'librin.man'))
+
+    paths += [
+        '/usr/include/mandarin/librin.man',
+        '/usr/local/include/mandarin/librin.man',
+    ]
+
+    for i in paths:
+        if os.path.isfile(i) and os.access(i, os.R_OK):
+            return i
+    raise exc.LibrinNotFound()
 
 
 def read_file(filename):

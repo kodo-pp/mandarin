@@ -37,6 +37,10 @@ class UsageError(MandarinError):
     description = 'Usage error'
 
 
+class LibrinNotFound(MandarinError):
+    description = 'Librin not found'
+
+
 class CodeError(MandarinError):
     """ Base class for errors connected with code """
 
