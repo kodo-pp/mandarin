@@ -657,7 +657,7 @@ class CxxGenerator(Generator):
             ]
         elif isinstance(expr, an.IntegerExpression):
             return [
-                'mandarin::support::construct<mandarin::user::mndr_Int>({} MANDARIN_INTEGER_SUFFIX)'.format(
+                'mandarin::support::construct<mandarin::user::mndr_Int>({}L)'.format(
                     self.check_integer(expr.value, expr.posinfo)
                 )
             ]

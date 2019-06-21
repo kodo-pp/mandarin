@@ -13,9 +13,19 @@ namespace mandarin
 
 namespace support
 {
+    using IntegerType = long;
+
     class GenericObject;
     class Object : public GenericObject;
-
+    class Type : public Object;
+    class Function : public Object;
+}
+namespace user
+{
+    class mndr_Str : public mandarin::support::Object;
+}
+namespace support
+{
     class GenericObject
     {
     public:
@@ -53,53 +63,64 @@ namespace support
         virtual std::shared_ptr<Object> _mndr_binary_logical_or     (const std::shared_ptr<Object>& rhs);
         virtual std::shared_ptr<Object> _mndr_binary_logical_xor    (const std::shared_ptr<Object>& rhs);
 
-        virtual std::shared_ptr<Object> mndr___unary_plus__();
-        virtual std::shared_ptr<Object> mndr___unary_minus__();
-        virtual std::shared_ptr<Object> mndr___unary_negate__();
-        virtual std::shared_ptr<Object> mndr___unary_compl__();
+        virtual std::shared_ptr<Object> _mndr_call(const std::vector<std::shared_ptr<Object>>& args);
 
-        virtual std::shared_ptr<Object> mndr___multiply__       (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___divide__         (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___modulo__         (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___int_divide__     (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___add__            (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___sub__            (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___incrange__       (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___range__          (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___equals__         (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___less_equals__    (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___greater_equals__ (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___not_equals__     (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___less__           (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___greater__        (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___logical_and__    (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___logical_or__     (const std::shared_ptr<Object>& rhs);
-        virtual std::shared_ptr<Object> mndr___logical_xor__    (const std::shared_ptr<Object>& rhs);
-
-        virtual std::shared_ptr<Object> mndr___iterator__();
-        virtual std::shared_ptr<Object> mndr___next__();
-        virtual std::shared_ptr<Object> mndr___inplace_next__();
-        virtual std::shared_ptr<Object> mndr___is_iteration_finished__();
-        virtual std::shared_ptr<Object> mndr___element__();
-
-        virtual std::shared_ptr<Object> _mndr_type_object();
+        virtual std::shared_ptr<Type> _mndr_type_object();
+        static std::shared_ptr<Type> _mndr_static_type_object();
     };
 
 
-    class Function : public GenericObject
-    {
-    public:
-        // Stopped here
-    }
-
-
+    // TODO: maybe make GenericObject == Object
     class Object : public GenericObject
     {
     public:
         Object();
+        virtual void _mndr_setup_member_table();
 
     private:
-        std::unordered_map<std::string, Function> methods;
+        std::unordered_map<std::string, std::shared_ptr<Object>> members;
+    };
+
+
+    class Function : public Object
+    {
+    public:
+        Function(
+            const std::weak_ptr<GenericObject>& object,
+            const std::string& name,
+            const std::vector<Type>& arg_types
+        );
+
+        Function(
+            const std::function<std::shared_ptr<Object>(const std::vector<std::shared_ptr<Object>>&)>& func,
+            const std::vector<Type>& arg_types
+        );
+
+        void _mndr_setup_member_table() override;
+
+        std::shared_ptr<Object> _mndr_call(const std::vector<std::shared_ptr<Object>>& args) override;
+
+        std::vector<Type>& arg_types;
+        bool is_method;
+        std::weak_ptr<Object>& object;
+        std::string name;
+        std::function<std::shared_ptr<Object>()> func;
+    };
+
+
+    class Type final : public Object
+    {
+    public:
+        Type(const std::shared_ptr<Type>& parent);
+
+        void _mndr_setup_member_table() override;
+        
+        bool _mndr_is_subclass(const std::shared_ptr<Type>& other);
+        std::shared_ptr<mndr_Str> mndr___name__(const std::vector<std::shared_ptr<Object>>& args);
+
+    private:
+        std::shared_ptr<Type> parent;
+        std::string name;
     };
 
     
@@ -151,12 +172,14 @@ namespace support
     {
         using To = detail::remove_pointer_t<RawTo>;
         auto ptr = x.get();
-        bool convertible = x->_mndr_is_instance(To::_mndr_static_type_object());
+        bool convertible = x->_mndr_type_object()->_mndr_is_subclass(To::_mndr_static_type_object());
         if (!convertible) {
             // TODO: raise (mandarin) exception
             std::cerr << "Fatal mandarin error: invalid dynamic_cast_to" << std::endl;
             abort();
         }
+
+        return std::static_pointer_cast<To>(x);
     }
 } // namespace support
 
@@ -164,20 +187,224 @@ namespace support
 namespace user
 {
     class mndr_NoneType : public mandarin::support::Object
-    {};
+    {
+        std::shared_ptr<mandarin::support::Object> mndr___to_string__();
+    };
 
     class mndr_Bool : public mandarin::support::Object
     {
     public:
-        std::shared_ptr<mandarin::support::Object> _mndr_unary_negate() override;
+        mndr_Bool(bool v);
+        void _mndr_setup_member_table() override;
+
+        std::shared_ptr<mandarin::support::Object> mndr___unary_negate__();
+        std::shared_ptr<mandarin::support::Object> mndr___to_string__();
+
     private:
         bool raw_value;
     };
 
     class mndr_Int : public mandarin::support::Object
     {
+        mndr_Int(mandarin::support::IntegerType v);
+        void _mndr_setup_member_table() override;
+
+        std::shared_ptr<mandarin::support::Object> mndr___unary_plus__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___unary_minus__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___unary_compl__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___add__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___sub__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___multiply__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___divide__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___int_divide__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___modulo__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___incrange__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___range__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___less__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___greater__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___less_equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___greater_equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___not_equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___to_string__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_plus__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_minus__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_multiply__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_divide__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_int_divide__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_modulo__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
     private:
-        int 
+        mandarin::support::IntegerType raw_value;
+    };
+
+
+    class mndr_Float : public mandarin::support::Object
+    {
+        mndr_Float(double v);
+        void _mndr_setup_member_table() override;
+
+        std::shared_ptr<mandarin::support::Object> mndr___unary_plus__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___unary_minus__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___add__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___sub__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___multiply__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___divide__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___modulo__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___less__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___greater__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___less_equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___greater_equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___not_equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___to_string__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_plus__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_minus__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_multiply__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_divide__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_modulo__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+    private:
+        double raw_value;
+    };
+
+
+    class mndr_Str : public mandarin::support::Object
+    {
+        mndr_Str(const std::string& s);
+        void _mndr_setup_member_table() override;
+
+        std::shared_ptr<mandarin::support::Object> mndr___unary_negate__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___add__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___multiply__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___modulo__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___less__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___greater__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___less_equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___greater_equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___not_equals__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___to_string__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_plus__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_multiply__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr___assign_modulo__(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+        std::shared_ptr<mandarin::support::Object> mndr_format(
+            const std::vector<std::shared_ptr<mandarin::support::Object>>& args
+        );
+    private:
+        std::string str;
     };
 } // namespace user
 
@@ -187,11 +414,12 @@ namespace support
     template <typename T>
     bool native_bool(const std::shared_ptr<T>& x)
     {
-        if (!x->_mndr_is_instance(mandarin::user::mndr_Bool::_mndr_static_type_object())) {
+        if (!x->_mndr_type_object()->_mndr_is_subclass(mandarin::user::mndr_Bool::_mndr_static_type_object())) {
             // TODO(?): raise (mandarin) exception
             std::cerr << "Fatal mandarin error: invalid native_bool" << std::endl;
             abort();
         }
+        return x->raw_value;
     }
 }
 } // namespace mandarin
