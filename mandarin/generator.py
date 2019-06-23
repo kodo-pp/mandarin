@@ -510,7 +510,7 @@ class CxxGenerator(Generator):
                     self.context.add_variable(arg.name, decl)
                 buf.append(') {\n');
                 for i, arg in enumerate(fd.decl.arguments):
-                    buf.append(f'    auto mndr_{arg.name} = mandarin::support::dynamic_cast<{arg.type.name}>')
+                    buf.append(f'    auto mndr_{arg.name} = mandarin::support::dynamic_cast_to<{arg.type.name}>')
                     buf.append(f'(args.at({i}));\n')
                 buf += self.generate_code_block(fd.body)
                 #  STUB!
@@ -783,7 +783,7 @@ class CxxGenerator(Generator):
                     ),
                 )
                 return [
-                    '{} {} = mandarin::support::cast_to<{}>({});\n'.format(
+                    '{} {} = mandarin::support::dynamic_cast_to<{}>({});\n'.format(
                         typename_c,
                         ''.join(self.generate_expression(lhs)),
                         typename_c,
@@ -827,7 +827,7 @@ class CxxGenerator(Generator):
                     typename = decl.type,
                 )
             return [f'{typename} mndr_{name};\n']
-        return [f'{typename} mndr_{name} = {"".join(self.generate_expression(decl.init_value))};\n']
+        return [f'{typename} mndr_{name} = mandarin::support::dynamic_cast_to<{typename}>({"".join(self.generate_expression(decl.init_value))});\n']
 
     @typechecked
     def is_default_constructible(self, typename: an.Typename) -> bool:
