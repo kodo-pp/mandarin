@@ -794,7 +794,19 @@ class Analyzer(object):
     @typechecked
     def unescape_string(self, string: str) -> str:
         # STUB!
-        return string
+        def gen():
+            s = string[1:-1]
+            for i in range(len(s)):
+                if s[i] == '\\':
+                    if i + 1 >= len(s):
+                        yield s[i]
+                        continue
+                    c = s[i+1]
+                    if c in 'ntrv0\\':
+                        yield {'n':'\n', 'r':'\r', 't':'\t', 'v':'\v', '0':'\0', '\\':'\\'}[c]
+                else:
+                    yield s[i]
+        return ''.join(gen())
 
     @typechecked
     def parse_function_call(self, node: lark.tree.Tree) -> FunctionCallExpression:
