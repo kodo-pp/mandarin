@@ -80,6 +80,131 @@ void Object::_mndr_maybe_call_method(const std::string& name, ArgList args)
     }
 }
 
+Value Object::_mndr_call_method(const std::string& name, ArgList args)
+{
+    if (auto it = this->member_table.find(name); it != this->member_table.end()) {
+        const auto& [k, v] = *it;
+        if (!isinstance<Function>(v)) {
+            error("Cannot call non-method member");
+        }
+        auto func = std::static_pointer_cast<Function>(v);
+        return func->_mndr_call(args);
+    } else {
+        error("Method " + name + " not found");
+    }
+}
+
+Value Object::_mndr_unary_plus()
+{
+    return _mndr_call_method("__unary_plus__", {});
+}
+
+Value Object::_mndr_unary_minus()
+{
+    return _mndr_call_method("__unary_minus__", {});
+}
+
+Value Object::_mndr_unary_negate()
+{
+    return _mndr_call_method("__unary_negate__", {});
+}
+
+Value Object::_mndr_unary_compl()
+{
+    return _mndr_call_method("__unary_compl__", {});
+}
+
+Value Object::_mndr_binary_multiply(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__multiply__", {rhs});
+}
+
+Value Object::_mndr_binary_divide(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__divide__", {rhs});
+}
+
+Value Object::_mndr_binary_modulo(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__modulo__", {rhs});
+}
+
+Value Object::_mndr_binary_int_divide(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__int_divide__", {rhs});
+}
+
+Value Object::_mndr_binary_plus(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__add__", {rhs});
+}
+
+Value Object::_mndr_binary_minus(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__sub__", {rhs});
+}
+
+Value Object::_mndr_binary_incrange(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__incrange__", {rhs});
+}
+
+Value Object::_mndr_binary_range(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__range__", {rhs});
+}
+
+Value Object::_mndr_binary_equals(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__equals__", {rhs});
+}
+
+Value Object::_mndr_binary_less_equals(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__less_equals__", {rhs});
+}
+
+Value Object::_mndr_binary_greater_equals(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__greater_equals__", {rhs});
+}
+
+Value Object::_mndr_binary_not_equals(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__not_equals__", {rhs});
+}
+
+Value Object::_mndr_binary_less(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__less__", {rhs});
+}
+
+Value Object::_mndr_binary_greater(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__greater__", {rhs});
+}
+
+Value Object::_mndr_binary_logical_and(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__and__", {rhs});
+}
+
+Value Object::_mndr_binary_logical_or(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__or__", {rhs});
+}
+
+Value Object::_mndr_binary_logical_xor(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__xor__", {rhs});
+}
+
+Value Object::_mndr_call(const std::vector<std::shared_ptr<Object>>& args)
+{
+    return _mndr_call_method("__call__", args);
+}
+
+
 
 
 Function::Function(

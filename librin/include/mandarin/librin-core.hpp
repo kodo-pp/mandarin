@@ -73,6 +73,11 @@ namespace support
             const std::vector<std::shared_ptr<Object>>& args
         );
 
+        std::shared_ptr<Object> _mndr_call_method(
+            const std::string& name,
+            const std::vector<std::shared_ptr<Object>>& args
+        );
+
 
     protected:
         std::unordered_map<std::string, std::shared_ptr<Object>> member_table;
