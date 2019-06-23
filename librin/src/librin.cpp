@@ -90,7 +90,7 @@ Value Object::_mndr_call_method(const std::string& name, ArgList args)
         auto func = std::static_pointer_cast<Function>(v);
         return func->_mndr_call(args);
     } else {
-        error("Method " + name + " not found");
+        error("Method " + name + " not found | type = " + _mndr_type_object()->name);
     }
 }
 
@@ -214,7 +214,9 @@ Function::Function(
     Object(),
     func(func),
     arg_types(arg_types)
-{ }
+{
+    _mndr_setup_member_table();
+}
 
 void Function::_mndr_setup_member_table()
 {
@@ -250,11 +252,14 @@ Type::Type(const std::string& name, const shared_ptr<Type>& parent):
     Object(),
     parent(parent),
     name(name)
-{ }
+{
+    _mndr_setup_member_table();
+}
 
 void Type::_mndr_setup_member_table()
 {
     member_table = {
+        /*
         {
             "is_subclass",
             make_object<Function>(
@@ -269,6 +274,7 @@ void Type::_mndr_setup_member_table()
                 std::vector<shared_ptr<Type>>{}
             )
         },
+        */
     };
 }
 
@@ -319,6 +325,15 @@ shared_ptr<Type> Type::_mndr_static_type_object()
 shared_ptr<Object> value_of_true    = std::make_shared<mandarin::user::mndr_Bool>(true);
 shared_ptr<Object> value_of_false   = std::make_shared<mandarin::user::mndr_Bool>(false);
 shared_ptr<Object> value_of_none    = std::make_shared<mandarin::user::mndr_NoneType>();
+
+void preinit()
+{ }
+bool init()
+{
+    return true;
+}
+void store_args([[maybe_unused]] int args, [[maybe_unused]] char** argv)
+{ }
 
 } // namespace mandarin::support
 
@@ -377,7 +392,9 @@ shared_ptr<Type> mndr_NoneType::_mndr_static_type_object()
 mndr_Bool::mndr_Bool(bool v):
     Object(),
     raw_value(v)
-{ }
+{
+    _mndr_setup_member_table();
+}
 
 void mndr_Bool::_mndr_setup_member_table()
 {
@@ -420,7 +437,9 @@ shared_ptr<Type> mndr_Bool::_mndr_static_type_object()
 mndr_Int::mndr_Int(mandarin::support::IntegerType v):
     Object(),
     raw_value(v)
-{ }
+{
+    _mndr_setup_member_table();
+}
 
 void mndr_Int::_mndr_setup_member_table()
 {
@@ -603,7 +622,9 @@ shared_ptr<Type> mndr_Int::_mndr_static_type_object()
 mndr_Float::mndr_Float(double v):
     Object(),
     raw_value(v)
-{ }
+{
+    _mndr_setup_member_table();
+}
 
 void mndr_Float::_mndr_setup_member_table()
 {
@@ -761,7 +782,9 @@ shared_ptr<Type> mndr_Float::_mndr_static_type_object()
 mndr_Str::mndr_Str(const std::string& s):
     Object(),
     str(s)
-{ }
+{
+    _mndr_setup_member_table();
+}
 
 void mndr_Str::_mndr_setup_member_table()
 {

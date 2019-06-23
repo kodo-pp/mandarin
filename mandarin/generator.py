@@ -42,10 +42,10 @@ class Generator(object):
             self.add_name(i.name)
 
         for i in self.class_defs:
-            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('@Type'))
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('Type'))
             self.context.add_variable(i.name, var)
         for i in self.function_decls:
-            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('@Function'))
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('Function'))
             self.context.add_variable(i.name, var)
 
     @typechecked
@@ -71,10 +71,10 @@ class Generator(object):
         self.function_defs  += function_defs
 
         for i in class_defs:
-            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('@Type'))
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('Type'))
             self.context.add_variable(i.name, var)
         for i in function_decls:
-            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('@Function'))
+            var = an.VariableDeclaration(posinfo=i.posinfo, name=i.name, type=an.Typename('Function'))
             self.context.add_variable(i.name, var)
 
     @staticmethod
@@ -363,7 +363,7 @@ class CxxGenerator(Generator):
             '#include <cstddef>\n',
             '#include <cstdint>\n',
             '#include <memory>\n',
-            '#include <mandarin.hpp>\n',
+            '#include <mandarin/mandarin.hpp>\n',
             'namespace mandarin {namespace user {\n',
         ]
 
@@ -377,7 +377,7 @@ class CxxGenerator(Generator):
             '    mandarin::support::preinit();\n',
             '    mandarin::support::store_args(argc, argv);\n',
             '    auto scoped_init = mandarin::support::init();\n',
-            '    mandarin::user::mndr_main();\n',
+            '    mandarin::user::mndr_main({});\n',
             '    return 0;\n',
             '}\n',
         ] if self.options['is_standalone'] else []
@@ -469,7 +469,8 @@ class CxxGenerator(Generator):
         return_type = fd.return_type
         canonical_return_type = self.canonicalize_type(return_type, fd.posinfo)
         buf.append(f'{canonical_return_type} mndr_{function_name}(')
-        buf += self.generate_function_arguments(fd)
+        #buf += self.generate_function_arguments(fd)
+        buf += 'const std::vector<std::shared_ptr<mandarin::support::Object>>& args'
         buf.append(');\n');
         return buf
 
@@ -497,7 +498,8 @@ class CxxGenerator(Generator):
             return_type = fd.decl.return_type
             canonical_return_type = self.canonicalize_type(return_type, fd.posinfo)
             buf.append(f'{canonical_return_type} mndr_{function_name}(')
-            buf += self.generate_function_arguments(fd.decl)
+            buf += 'const std::vector<std::shared_ptr<mandarin::support::Object>>& args'
+            #buf += self.generate_function_arguments(fd.decl)
             with self.context.push():
                 for arg in fd.decl.arguments:
                     decl = an.VariableDeclaration(
@@ -507,7 +509,12 @@ class CxxGenerator(Generator):
                     )
                     self.context.add_variable(arg.name, decl)
                 buf.append(') {\n');
+                for i, arg in enumerate(fd.decl.arguments):
+                    buf.append(f'    auto mndr_{arg.name} = mandarin::support::dynamic_cast<{arg.type.name}>')
+                    buf.append(f'(args.at({i}));\n')
                 buf += self.generate_code_block(fd.body)
+                #  STUB!
+                buf += '    return mandarin::support::value_of_none;\n'
                 buf.append('}\n');
                 return buf
 
@@ -623,10 +630,10 @@ class CxxGenerator(Generator):
     @typechecked
     def generate_function_call_expression(self, expr: an.FunctionCallExpression) -> List[str]:
         return [
-            'mandarin::support::function_call({}{})'.format(
+            'mandarin::support::function_call({}, {{{}}})'.format(
                 ''.join(self.generate_expression(expr.func)),
-                ''.join([
-                    ', ' + ''.join(self.generate_expression(arg)) for arg in expr.args
+                ', '.join([
+                    ''.join(self.generate_expression(arg)) for arg in expr.args
                 ]),
             )
         ]
@@ -651,13 +658,13 @@ class CxxGenerator(Generator):
     def generate_literal_expression(self, expr: an.LiteralExpression) -> List[str]:
         if isinstance(expr, an.StringExpression):
             return [
-                'mandarin::support::construct<mandarin::user::mndr_Str>({})'.format(
+                'std::static_pointer_cast<mandarin::support::Object>(std::make_shared<mandarin::user::mndr_Str>({}))'.format(
                     self.escape_string(expr.value, expr.posinfo)
                 )
             ]
         elif isinstance(expr, an.IntegerExpression):
             return [
-                'mandarin::support::construct<mandarin::user::mndr_Int>({}L)'.format(
+                'std::static_pointer_cast<mandarin::support::Object>(std::make_shared<mandarin::user::mndr_Int>({}L))'.format(
                     self.check_integer(expr.value, expr.posinfo)
                 )
             ]

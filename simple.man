@@ -1,3 +1,4 @@
 def main()
     print('Hello!')
+    print(2 + 2 * 2)
 end

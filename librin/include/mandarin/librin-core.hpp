@@ -170,7 +170,6 @@ namespace support
     detail::make_pointer_t<RawTo> dynamic_cast_to(const std::shared_ptr<From>& x)
     {
         using To = detail::remove_pointer_t<RawTo>;
-        auto ptr = x.get();
         bool convertible = x->_mndr_type_object()->_mndr_is_subclass(To::_mndr_static_type_object());
         if (!convertible) {
             // TODO: raise (mandarin) exception
@@ -180,6 +179,23 @@ namespace support
 
         return std::static_pointer_cast<To>(x);
     }
+
+    template <typename F>
+    std::shared_ptr<Object> function_call(const F& func, const std::vector<std::shared_ptr<Object>>& args)
+    {
+        // Assumed function pointer
+        return func(args);
+    }
+
+    template <typename T>
+    std::shared_ptr<Object> function_call(
+        const std::shared_ptr<T>& func,
+        const std::vector<std::shared_ptr<Object>>& args
+    )
+    {
+        return func->_mndr_call(args);
+    }
+
 } // namespace support
 
 
@@ -451,6 +467,11 @@ namespace support
         obj->_mndr_maybe_call_method("new", args);
         return obj;
     }
+
+    // STUBS!
+    void preinit();
+    bool init();
+    void store_args(int args, char** argv);
 }
 } // namespace mandarin
 
