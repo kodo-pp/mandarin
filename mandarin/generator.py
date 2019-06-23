@@ -443,7 +443,7 @@ class CxxGenerator(Generator):
             if not self.context.has_variable(typename.name):
                 # STUB!
                 raise exc.UndeclaredVariable(posinfo=posinfo, name=typename.name)
-            return f'mandarin::shared_ptr<mandarin::user::mndr_{typename.name}>'
+            return f'std::shared_ptr<mandarin::user::mndr_{typename.name}>'
 
     @typechecked
     def generate_function_arguments(self, fd: an.FunctionDeclaration) -> List[str]:
