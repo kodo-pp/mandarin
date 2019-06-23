@@ -204,6 +204,36 @@ Value Object::_mndr_call(const std::vector<std::shared_ptr<Object>>& args)
     return _mndr_call_method("__call__", args);
 }
 
+Value Object::_mndr_assign_plus(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__assign_plus__", {rhs});
+}
+
+Value Object::_mndr_assign_minus(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__assign_minus__", {rhs});
+}
+
+Value Object::_mndr_assign_multiply(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__assign_multiply__", {rhs});
+}
+
+Value Object::_mndr_assign_divide(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__assign_divide__", {rhs});
+}
+
+Value Object::_mndr_assign_int_divide(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__assign_divide__", {rhs});
+}
+
+Value Object::_mndr_assign_modulo(const std::shared_ptr<Object>& rhs)
+{
+    return _mndr_call_method("__assign_modulo__", {rhs});
+}
+
 
 
 

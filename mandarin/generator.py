@@ -510,7 +510,7 @@ class CxxGenerator(Generator):
                     self.context.add_variable(arg.name, decl)
                 buf.append(') {\n');
                 for i, arg in enumerate(fd.decl.arguments):
-                    buf.append(f'    auto mndr_{arg.name} = mandarin::support::dynamic_cast_to<{arg.type.name}>')
+                    buf.append(f'    auto mndr_{arg.name} = mandarin::support::dynamic_cast_to<mndr_{arg.type.name}>')
                     buf.append(f'(args.at({i}));\n')
                 buf += self.generate_code_block(fd.body)
                 #  STUB!

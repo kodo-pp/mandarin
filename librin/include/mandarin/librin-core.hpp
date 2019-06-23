@@ -61,6 +61,13 @@ namespace support
         virtual std::shared_ptr<Object> _mndr_binary_logical_or     (const std::shared_ptr<Object>& rhs);
         virtual std::shared_ptr<Object> _mndr_binary_logical_xor    (const std::shared_ptr<Object>& rhs);
 
+        virtual std::shared_ptr<Object> _mndr_assign_multiply       (const std::shared_ptr<Object>& rhs);
+        virtual std::shared_ptr<Object> _mndr_assign_divide         (const std::shared_ptr<Object>& rhs);
+        virtual std::shared_ptr<Object> _mndr_assign_modulo         (const std::shared_ptr<Object>& rhs);
+        virtual std::shared_ptr<Object> _mndr_assign_int_divide     (const std::shared_ptr<Object>& rhs);
+        virtual std::shared_ptr<Object> _mndr_assign_plus           (const std::shared_ptr<Object>& rhs);
+        virtual std::shared_ptr<Object> _mndr_assign_minus          (const std::shared_ptr<Object>& rhs);
+
         virtual std::shared_ptr<Object> _mndr_call(const std::vector<std::shared_ptr<Object>>& args);
 
         virtual std::shared_ptr<Type> _mndr_type_object();
