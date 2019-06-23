@@ -460,7 +460,7 @@ namespace support
             std::cerr << "Fatal mandarin error: invalid native_bool" << std::endl;
             abort();
         }
-        return x->raw_value;
+        return cast_to<mandarin::user::mndr_Bool>(x)->raw_value;
     }
 
     extern std::shared_ptr<mandarin::support::Object> value_of_none;
