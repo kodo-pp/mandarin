@@ -557,8 +557,9 @@ class CxxGenerator(Generator):
             buf += self.generate_code_block(body)
             buf += ['}']
         if stmt.false_branch is not None:
-            buf += [' else {']
+            buf += [' else {\n']
             buf += self.generate_code_block(stmt.false_branch)
+            buf += ['}']
         buf += ['\n']
         return buf
     
