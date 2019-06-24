@@ -100,6 +100,10 @@ def test_016():
     _test_parses('./test_files/016-self-as-a-class-member.man')
 
 
+def test_017():
+    _test_parses('./test_files/017-if-else-without-elifs.man')
+
+
 
 
 def test_inv_001():

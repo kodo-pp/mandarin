@@ -1,7 +1,7 @@
 def main()
     if true
-        print("foo")
+        print(1)
     else
-        print("bar")
+        print(2)
     end
 end

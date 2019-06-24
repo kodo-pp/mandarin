@@ -656,18 +656,20 @@ class Analyzer(object):
 
         nodes = node.children
         i = 3
-        while i < len(nodes):
+        while i < len(nodes) and nodes[i-1].data == 'code_block_elif':
+        #while i < len(nodes):
             assert i + 1 < len(nodes)
             cond = self.parse_expression(nodes[i])
             body = self.parse_code_block(nodes[i+1])
             alternatives.append((cond, body))
-            if nodes[i+1].data == 'code_block_else':
-                break
+            #if nodes[i+1].data == 'code_block_else':
+            #    break
             i += 2
         if i < len(nodes):
-            if nodes[i+1].data == 'code_block_else':
-                false_branch = self.parse_code_block(nodes[i+2])
-            assert i + 3 == len(nodes)
+            #if nodes[i-1].data == 'code_block_else':
+            assert nodes[i-1].data == 'code_block_else'
+            false_branch = self.parse_code_block(nodes[i])
+            #assert i + 3 == len(nodes)
         
         return IfStatement(
             posinfo = pi.from_lark(filename=self.filename, node=node),
